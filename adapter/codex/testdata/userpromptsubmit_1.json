@@ -1,0 +1,16 @@
+{
+  "env": {
+    "HIVERYN_ARCHITECT_FOLDER": "/tmp/hiveryn-lab-architect",
+    "HIVERYN_SESSION_ID": "hiveryn-lab-homehooks-1",
+    "HIVERYN_SESSION_KIND": "worker"
+  },
+  "hook": {
+    "cwd": "/tmp/work",
+    "hook_event_name": "UserPromptSubmit",
+    "model": "gpt-5.5",
+    "prompt": "Run exactly this shell command and then briefly say done: echo hiveryn-home-hook-test",
+    "session_id": "019de2b8-2c7c-74c1-952a-88d8253afc2c",
+    "turn_id": "019de2b8-2c83-7551-9555-c28dd0d7f5c2"
+  },
+  "received_at": "2026-05-01T08:46:58.27063Z"
+}
