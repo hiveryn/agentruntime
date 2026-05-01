@@ -12,7 +12,12 @@ type Receiver struct {
 	adapters          map[agentruntime.AgentKind]agentruntime.Adapter
 	hub               *Hub
 	mu                sync.Mutex
-	primaryNativeByID map[string]string
+	primaryNativeByID map[receiverKey]string
+}
+
+type receiverKey struct {
+	agent agentruntime.AgentKind
+	id    string
 }
 
 func NewReceiver(adapters ...agentruntime.Adapter) *Receiver {
@@ -27,7 +32,7 @@ func NewReceiver(adapters ...agentruntime.Adapter) *Receiver {
 	return &Receiver{
 		adapters:          indexed,
 		hub:               NewHub(),
-		primaryNativeByID: map[string]string{},
+		primaryNativeByID: map[receiverKey]string{},
 	}
 }
 
@@ -69,14 +74,26 @@ func (r *Receiver) classifyNativeSession(event *agentruntime.Event) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	primary := r.primaryNativeByID[event.ID]
+	key := receiverKey{agent: event.Agent, id: event.ID}
+	primary := r.primaryNativeByID[key]
+	if event.PrimaryNativeID != "" {
+		if primary == "" {
+			primary = event.PrimaryNativeID
+			r.primaryNativeByID[key] = primary
+		}
+	}
 	if primary == "" {
 		primary = event.NativeID
-		r.primaryNativeByID[event.ID] = primary
+		r.primaryNativeByID[key] = primary
 	}
 
-	event.PrimaryNativeID = primary
-	if event.NativeID == primary {
+	if event.PrimaryNativeID == "" {
+		event.PrimaryNativeID = primary
+	}
+	if event.NativeSessionRole != agentruntime.NativeSessionRoleUnknown {
+		return
+	}
+	if event.NativeID == event.PrimaryNativeID {
 		event.NativeSessionRole = agentruntime.NativeSessionRolePrimary
 		return
 	}

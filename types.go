@@ -63,10 +63,11 @@ type Event struct {
 }
 
 type LaunchSpec struct {
-	Command string
-	Args    []string
-	Env     map[string]string
-	Workdir string
+	Command      string
+	Args         []string
+	Env          map[string]string
+	Workdir      string
+	CleanupPaths []string
 }
 
 type MCPServerConfig struct {

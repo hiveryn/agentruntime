@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/hiveryn/agentruntime"
+	"github.com/hiveryn/agentruntime/adapter/claude"
 	"github.com/hiveryn/agentruntime/adapter/codex"
 )
 
@@ -139,9 +140,102 @@ func TestReceiverRejectsUnsupportedAgent(t *testing.T) {
 	}
 }
 
+func TestReceiverIngestPublishesClaudeSession(t *testing.T) {
+	receiver := NewReceiver(claude.New(claude.DefaultOptions()))
+	sub := receiver.Hub().Subscribe(Filter{ID: "hiv-claude-lab-1"})
+	defer sub.Close()
+
+	data := readClaudeFixture(t, "sessionstart_1.json")
+	event, err := receiver.Ingest(context.Background(), agentruntime.AgentClaude, data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if event == nil {
+		t.Fatal("expected event")
+	}
+	if event.Agent != agentruntime.AgentClaude {
+		t.Fatalf("agent: %q", event.Agent)
+	}
+	if event.PrimaryNativeID != event.NativeID {
+		t.Fatalf("PrimaryNativeID: got %q want %q", event.PrimaryNativeID, event.NativeID)
+	}
+	if event.NativeSessionRole != agentruntime.NativeSessionRolePrimary {
+		t.Fatalf("NativeSessionRole: got %q want %q", event.NativeSessionRole, agentruntime.NativeSessionRolePrimary)
+	}
+
+	select {
+	case got := <-sub.Events:
+		if got.ID != event.ID || got.NativeID != event.NativeID || got.Status != event.Status {
+			t.Fatalf("got %+v want %+v", got, *event)
+		}
+	default:
+		t.Fatal("expected published event")
+	}
+}
+
+func TestReceiverKeepsClaudeSubagentParentWhenSeenFirst(t *testing.T) {
+	receiver := NewReceiver(claude.New(claude.DefaultOptions()))
+
+	subagent, err := receiver.Ingest(context.Background(), agentruntime.AgentClaude, []byte(`{"hook":{"hook_event_name":"PreToolUse","session_id":"native-primary","agent_id":"native-sub","agent_type":"Explore","tool_name":"Read"},"env":{"HIVERYN_SESSION_ID":"caller-1"}}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if subagent.NativeSessionRole != agentruntime.NativeSessionRoleSubsession {
+		t.Fatalf("subagent role: %q", subagent.NativeSessionRole)
+	}
+	if subagent.PrimaryNativeID != "native-primary" {
+		t.Fatalf("subagent primary native ID: %q", subagent.PrimaryNativeID)
+	}
+
+	primary, err := receiver.Ingest(context.Background(), agentruntime.AgentClaude, []byte(`{"hook":{"hook_event_name":"SessionStart","session_id":"native-primary"},"env":{"HIVERYN_SESSION_ID":"caller-1"}}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if primary.NativeSessionRole != agentruntime.NativeSessionRolePrimary {
+		t.Fatalf("primary role: %q", primary.NativeSessionRole)
+	}
+	if primary.PrimaryNativeID != "native-primary" {
+		t.Fatalf("primary native ID: %q", primary.PrimaryNativeID)
+	}
+}
+
+func TestReceiverSeparatesPrimaryNativeByAgent(t *testing.T) {
+	receiver := NewReceiver(codex.New(codex.DefaultOptions()), claude.New(claude.DefaultOptions()))
+
+	codexEvent, err := receiver.Ingest(context.Background(), agentruntime.AgentCodex, []byte(`{"hook":{"hook_event_name":"SessionStart","session_id":"codex-native"},"env":{"HIVERYN_SESSION_ID":"caller-1"}}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	claudeEvent, err := receiver.Ingest(context.Background(), agentruntime.AgentClaude, []byte(`{"hook":{"hook_event_name":"SessionStart","session_id":"claude-native"},"env":{"HIVERYN_SESSION_ID":"caller-1"}}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if codexEvent.NativeSessionRole != agentruntime.NativeSessionRolePrimary {
+		t.Fatalf("codex role: %q", codexEvent.NativeSessionRole)
+	}
+	if claudeEvent.NativeSessionRole != agentruntime.NativeSessionRolePrimary {
+		t.Fatalf("claude role: %q", claudeEvent.NativeSessionRole)
+	}
+	if codexEvent.PrimaryNativeID != "codex-native" {
+		t.Fatalf("codex primary native ID: %q", codexEvent.PrimaryNativeID)
+	}
+	if claudeEvent.PrimaryNativeID != "claude-native" {
+		t.Fatalf("claude primary native ID: %q", claudeEvent.PrimaryNativeID)
+	}
+}
+
 func readFixture(t *testing.T, name string) []byte {
 	t.Helper()
 	data, err := os.ReadFile(filepath.Join("..", "adapter", "codex", "testdata", name))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return data
+}
+
+func readClaudeFixture(t *testing.T, name string) []byte {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join("..", "adapter", "claude", "testdata", name))
 	if err != nil {
 		t.Fatal(err)
 	}

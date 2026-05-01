@@ -1,0 +1,18 @@
+{
+  "agent": "claude",
+  "args": [],
+  "env": {
+    "HIVERYN_SESSION_ID": "hiv-claude-lab-1",
+    "HIVERYN_SESSION_KIND": "worker"
+  },
+  "hook": {
+    "agent_id": "a1bcb29f5d4b9670b",
+    "agent_type": "Explore",
+    "cwd": "/tmp/lab",
+    "hook_event_name": "SubagentStart",
+    "session_id": "00000000-0000-4000-8000-000000000001",
+    "transcript_path": "/tmp/transcript.jsonl"
+  },
+  "hook_cwd": "/tmp/lab",
+  "received_at": "2026-05-01T13:31:23.502910+00:00"
+}

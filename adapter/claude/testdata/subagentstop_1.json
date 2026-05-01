@@ -1,0 +1,22 @@
+{
+  "agent": "claude",
+  "args": [],
+  "env": {
+    "HIVERYN_SESSION_ID": "hiv-claude-lab-1",
+    "HIVERYN_SESSION_KIND": "worker"
+  },
+  "hook": {
+    "agent_id": "a1bcb29f5d4b9670b",
+    "agent_transcript_path": "/tmp/subagent.jsonl",
+    "agent_type": "Explore",
+    "cwd": "/tmp/lab",
+    "hook_event_name": "SubagentStop",
+    "last_assistant_message": "This lab captures Claude Code hook payloads.",
+    "permission_mode": "default",
+    "session_id": "00000000-0000-4000-8000-000000000001",
+    "stop_hook_active": false,
+    "transcript_path": "/tmp/transcript.jsonl"
+  },
+  "hook_cwd": "/tmp/lab",
+  "received_at": "2026-05-01T13:31:28.638042+00:00"
+}

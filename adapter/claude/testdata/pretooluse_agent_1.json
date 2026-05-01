@@ -1,0 +1,24 @@
+{
+  "agent": "claude",
+  "args": [],
+  "env": {
+    "HIVERYN_SESSION_ID": "hiv-claude-lab-1",
+    "HIVERYN_SESSION_KIND": "worker"
+  },
+  "hook": {
+    "cwd": "/tmp/lab",
+    "hook_event_name": "PreToolUse",
+    "permission_mode": "default",
+    "session_id": "00000000-0000-4000-8000-000000000001",
+    "tool_input": {
+      "description": "Summarize lab README",
+      "prompt": "Read the README and summarize it.",
+      "subagent_type": "Explore"
+    },
+    "tool_name": "Agent",
+    "tool_use_id": "toolu_parent",
+    "transcript_path": "/tmp/transcript.jsonl"
+  },
+  "hook_cwd": "/tmp/lab",
+  "received_at": "2026-05-01T13:31:23.375495+00:00"
+}
