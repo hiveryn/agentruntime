@@ -21,6 +21,14 @@ const (
 	StatusEnded         Status = "ended"
 )
 
+type NativeSessionRole string
+
+const (
+	NativeSessionRoleUnknown    NativeSessionRole = ""
+	NativeSessionRolePrimary    NativeSessionRole = "primary"
+	NativeSessionRoleSubsession NativeSessionRole = "subsession"
+)
+
 type StartRequest struct {
 	ID           string
 	Agent        AgentKind
@@ -41,15 +49,17 @@ type Session struct {
 }
 
 type Event struct {
-	ID       string
-	NativeID string
-	Agent    AgentKind
-	Status   Status
-	Tool     string
-	Message  string
-	At       time.Time
-	Metadata map[string]string
-	Raw      map[string]any
+	ID                string
+	NativeID          string
+	PrimaryNativeID   string
+	NativeSessionRole NativeSessionRole
+	Agent             AgentKind
+	Status            Status
+	Tool              string
+	Message           string
+	At                time.Time
+	Metadata          map[string]string
+	Raw               map[string]any
 }
 
 type LaunchSpec struct {

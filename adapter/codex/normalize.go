@@ -72,7 +72,7 @@ func normalizeEnvelope(env envelope) (*agentruntime.Event, error) {
 		Message:  codexMessage(name, env.Hook),
 		At:       at,
 		Metadata: emptyNil(meta),
-		Raw:      env.Hook,
+		Raw:      rawEnvelope(env),
 	}, nil
 }
 
@@ -142,4 +142,23 @@ func emptyNil(values map[string]string) map[string]string {
 		return nil
 	}
 	return values
+}
+
+func rawEnvelope(env envelope) map[string]any {
+	raw := map[string]any{
+		"hook": env.Hook,
+	}
+	if len(env.Env) > 0 {
+		raw["env"] = env.Env
+	}
+	if env.ReceivedAt != "" {
+		raw["received_at"] = env.ReceivedAt
+	}
+	if env.HookCWD != "" {
+		raw["hook_cwd"] = env.HookCWD
+	}
+	if len(env.Args) > 0 {
+		raw["args"] = env.Args
+	}
+	return raw
 }

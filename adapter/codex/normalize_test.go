@@ -66,6 +66,9 @@ func TestCapturedCodexExecSequence(t *testing.T) {
 		if event.Raw == nil {
 			t.Errorf("%s Raw nil", name)
 		}
+		if hook, _ := event.Raw["hook"].(map[string]any); hook == nil {
+			t.Errorf("%s Raw missing hook envelope", name)
+		}
 	}
 }
 
@@ -105,5 +108,32 @@ func TestPermissionRequestMapsToWorking(t *testing.T) {
 	}
 	if event.Status != agentruntime.StatusWorking || event.Tool != "ApplyPatch" || event.ID != "hiv-123" {
 		t.Fatalf("got %+v", event)
+	}
+}
+
+func TestNormalizePreservesEnvelopeForDiagnostics(t *testing.T) {
+	adapter := New(DefaultOptions())
+	data := []byte(`{"received_at":"2026-05-01T08:46:58.178726Z","hook":{"hook_event_name":"SessionStart","session_id":"native-123"},"env":{"HIVERYN_SESSION_ID":"hiv-123"},"hook_cwd":"/tmp/work","args":["hook"]}`)
+
+	event, err := adapter.NormalizeEvent(context.Background(), data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if event == nil {
+		t.Fatal("expected event")
+	}
+	if got := event.Raw["received_at"]; got != "2026-05-01T08:46:58.178726Z" {
+		t.Fatalf("received_at: %#v", got)
+	}
+	if got := event.Raw["hook_cwd"]; got != "/tmp/work" {
+		t.Fatalf("hook_cwd: %#v", got)
+	}
+	env, _ := event.Raw["env"].(map[string]string)
+	if env == nil || env["HIVERYN_SESSION_ID"] != "hiv-123" {
+		t.Fatalf("env: %#v", event.Raw["env"])
+	}
+	args, _ := event.Raw["args"].([]string)
+	if len(args) != 1 || args[0] != "hook" {
+		t.Fatalf("args: %#v", event.Raw["args"])
 	}
 }
