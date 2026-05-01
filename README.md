@@ -2,6 +2,10 @@
 
 Reusable Go primitives for launching agent CLIs and consuming their hook events.
 
+## Status
+
+`v0.x.y` - pre-v1. APIs may change while the module is being exercised by Hiveryn daemon and desktop integrations.
+
 ## Example
 
 ```go

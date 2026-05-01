@@ -16,7 +16,9 @@ func (r *Receiver) Handler(agent agentruntime.AgentKind) http.Handler {
 			return
 		}
 
-		defer req.Body.Close()
+		defer func() {
+			_ = req.Body.Close()
+		}()
 		var payload any
 		if err := json.NewDecoder(http.MaxBytesReader(w, req.Body, defaultMaxBodyBytes)).Decode(&payload); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)

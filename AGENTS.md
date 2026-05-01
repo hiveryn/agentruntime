@@ -31,3 +31,8 @@
 - Prefer adding behavior behind existing adapter seams over widening root interfaces.
 - Keep HTTP as convenience only; daemon-style callers should be able to call primitive ingest directly.
 - Tests must use local or captured fixtures, not live agent runs.
+
+## Development
+
+- Run `make tidy && git diff --exit-code -- go.mod go.sum` before merging.
+- Run `make vet test build lint` for local preflight.
