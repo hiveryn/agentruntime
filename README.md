@@ -51,7 +51,8 @@ func main() {
 		ID:      "session-1",
 		Agent:   agentruntime.AgentCodex,
 		Workdir: "/tmp/work",
-		Prompt:  "Summarize this repository.",
+		Instructions: "Be concise and prefer bullet points.",
+		Prompt:       "Summarize this repository.",
 	})
 	if err != nil {
 		log.Fatal(err)

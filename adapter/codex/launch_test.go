@@ -99,16 +99,70 @@ func TestPrepareLaunchHTTPMCP(t *testing.T) {
 	}
 }
 
+func TestPrepareLaunchInstructionsUseDeveloperOverride(t *testing.T) {
+	adapter := New(DefaultOptions())
+	req := agentruntime.StartRequest{
+		ID:           "session-2",
+		Agent:        agentruntime.AgentCodex,
+		Workdir:      "/tmp/work",
+		Instructions: "Be terse. Prefer bullets.",
+		Prompt:       "Summarize this repository.",
+	}
+
+	spec, err := adapter.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !hasArgPair(spec.Args, "--config", "developer_instructions=\"Be terse. Prefer bullets.\"") {
+		t.Fatalf("args missing developer instructions override: %q", spec.Args)
+	}
+	if got := spec.Args[len(spec.Args)-1]; got != req.Prompt {
+		t.Fatalf("prompt arg = %q, want %q", got, req.Prompt)
+	}
+}
+
+func TestPrepareLaunchIgnoresBlankInstructions(t *testing.T) {
+	adapter := New(DefaultOptions())
+	req := agentruntime.StartRequest{
+		ID:           "session-3",
+		Agent:        agentruntime.AgentCodex,
+		Workdir:      "/tmp/work",
+		Instructions: " \n\t ",
+		Prompt:       "Summarize this repository.",
+	}
+
+	spec, err := adapter.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for i := 0; i+1 < len(spec.Args); i++ {
+		if spec.Args[i] == "--config" && strings.HasPrefix(spec.Args[i+1], "developer_instructions=") {
+			t.Fatalf("unexpected blank developer instructions override: %q", spec.Args)
+		}
+	}
+}
+
 func TestPrepareLaunchValidation(t *testing.T) {
 	adapter := New(DefaultOptions())
 
 	if _, err := adapter.PrepareLaunch(context.Background(), agentruntime.StartRequest{Agent: agentruntime.AgentCodex, Workdir: "/tmp"}); err == nil {
 		t.Fatal("expected missing ID error")
 	}
+	if _, err := adapter.PrepareLaunch(context.Background(), agentruntime.StartRequest{ID: "x", Agent: agentruntime.AgentCodex}); err == nil {
+		t.Fatal("expected missing workdir error")
+	}
 	if _, err := adapter.PrepareLaunch(context.Background(), agentruntime.StartRequest{ID: "x", Agent: agentruntime.AgentClaude, Workdir: "/tmp"}); err == nil {
 		t.Fatal("expected unsupported agent error")
 	}
-	if _, err := adapter.PrepareLaunch(context.Background(), agentruntime.StartRequest{ID: "x", Workdir: "/tmp", Instructions: "be terse"}); err == nil {
-		t.Fatal("expected unsupported instructions error")
+}
+
+func hasArgPair(args []string, key, value string) bool {
+	for i := 0; i+1 < len(args); i++ {
+		if args[i] == key && args[i+1] == value {
+			return true
+		}
 	}
+	return false
 }

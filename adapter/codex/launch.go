@@ -20,9 +20,6 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 	if req.Agent != "" && req.Agent != agentruntime.AgentCodex {
 		return agentruntime.LaunchSpec{}, fmt.Errorf("unsupported agent %q", req.Agent)
 	}
-	if req.Instructions != "" {
-		return agentruntime.LaunchSpec{}, fmt.Errorf("codex instructions transport is not implemented yet")
-	}
 
 	command := req.Command
 	if command == "" {
@@ -50,6 +47,11 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 	}
 	if a.options.Profile != "" {
 		args = append(args, "--profile", a.options.Profile)
+	}
+	if strings.TrimSpace(req.Instructions) != "" {
+		// Keep durable session/role instructions additive by injecting them as a
+		// separate developer message instead of replacing Codex base instructions.
+		args = append(args, "--config", tomlKV("developer_instructions", req.Instructions))
 	}
 
 	for _, server := range req.MCPServers {
