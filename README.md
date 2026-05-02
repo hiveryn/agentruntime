@@ -2,7 +2,7 @@
 
 Reusable Go primitives for launching agent CLIs and consuming their hook events.
 
-Current first-class adapters: `codex` and `claude`.
+Current first-class adapters: `codex`, `claude`, and `opencode`.
 
 ## Status
 
@@ -136,5 +136,75 @@ func main() {
 
 	_ = spec // Run this command in your own process or pty manager.
 	// Remove spec.CleanupPaths after the agent process exits (MCP config files).
+}
+```
+
+### OpenCode
+
+```go
+package main
+
+import (
+	"context"
+	"log"
+	"net/http"
+
+	"github.com/hiveryn/agentruntime"
+	"github.com/hiveryn/agentruntime/adapter/opencode"
+	"github.com/hiveryn/agentruntime/ingest"
+)
+
+func main() {
+	ctx := context.Background()
+	adapter := opencode.New(opencode.DefaultOptions())
+	receiver := ingest.NewReceiver(adapter)
+
+	sub := receiver.Hub().Subscribe(ingest.Filter{ID: "session-1"})
+	defer sub.Close()
+	go func() {
+		for event := range sub.Events {
+			log.Printf("status=%s role=%s native=%s tool=%s", event.Status, event.NativeSessionRole, event.NativeID, event.Tool)
+		}
+	}()
+
+	mux := http.NewServeMux()
+	// OpenCode plugin POSTs to /opencode — mount the handler there.
+	mux.Handle("/opencode", receiver.Handler(agentruntime.AgentOpenCode))
+	go func() {
+		log.Fatal(http.ListenAndServe("127.0.0.1:9000", mux))
+	}()
+
+	// EnsureSetup writes a marker-scoped TypeScript plugin into
+	// ~/.config/opencode/plugins/ — safe to call on every startup (idempotent).
+	_, err := adapter.EnsureSetup(ctx, agentruntime.SetupRequest{
+		Agents: []agentruntime.AgentKind{agentruntime.AgentOpenCode},
+		Marker: "example",
+		Hook: agentruntime.HookCommand{
+			Command: "http://127.0.0.1:9000",
+		},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	spec, err := adapter.PrepareLaunch(ctx, agentruntime.StartRequest{
+		ID:           "session-1",
+		Agent:        agentruntime.AgentOpenCode,
+		Workdir:      "/tmp/work",
+		Instructions: "Be concise and prefer bullet points.",
+		Prompt:       "Summarize this repository.",
+		// Optional: attach stdio or HTTP MCP servers.
+		MCPServers: []agentruntime.MCPServerConfig{{
+			Name:    "my-tools",
+			Command: "my-mcp-server",
+			Args:    []string{"--port", "8080"},
+		}},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	_ = spec // Run this command in your own process or pty manager.
+	// Remove spec.CleanupPaths after the agent process exits (instructions files).
 }
 ```

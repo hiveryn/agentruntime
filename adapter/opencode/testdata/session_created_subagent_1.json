@@ -1,0 +1,19 @@
+{
+  "hook_event_name": "session.created",
+  "session_id": "ses_2187309a0ffei2yvqz6hijRuQX",
+  "parent_session_id": "ses_21873b6cbffeL3JOLPOFsrfKEt",
+  "hiveryn_session_id": "hiv-opencode-capture-1",
+  "payload": {
+    "info": {
+      "directory": "/work",
+      "id": "ses_2187309a0ffei2yvqz6hijRuQX",
+      "parentID": "ses_21873b6cbffeL3JOLPOFsrfKEt",
+      "projectID": "global",
+      "slug": "witty-sailor",
+      "time": {"created": 1777706268255, "updated": 1777706268255},
+      "title": "Explore current directory (@explore subagent)",
+      "version": "1.14.31"
+    },
+    "sessionID": "ses_2187309a0ffei2yvqz6hijRuQX"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "hook_event_name": "server.instance.disposed",
+  "session_id": "",
+  "parent_session_id": "",
+  "hiveryn_session_id": "hiv-opencode-capture-1",
+  "payload": {
+    "directory": "/work"
+  }
+}

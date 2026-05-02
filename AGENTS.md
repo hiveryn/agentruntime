@@ -12,7 +12,9 @@
 
 - Root package: shared public types and the `Adapter` interface.
 - `adapter/<agent>`: agent-specific launch synthesis, hook setup, and native event normalization.
-- `adapter/codex`: first concrete adapter; uses `HIVERYN_SESSION_ID` for caller-owned correlation and preserves Codex `session_id` as `NativeID`.
+- `adapter/codex`: uses `HIVERYN_SESSION_ID` for caller-owned correlation; hook setup writes `~/.codex/hooks.json`.
+- `adapter/claude`: uses `--session-id` UUID for native correlation; hook setup writes `~/.claude/settings.json`.
+- `adapter/opencode`: uses `OPENCODE_CONFIG_CONTENT` for per-session config; hook setup writes a TypeScript plugin to `~/.config/opencode/plugins/`; plugin POSTs events to `<endpoint>/opencode`.
 - `ingest`: reusable in-process event hub, primitive byte-ingest API, and optional local HTTP hook handler.
 
 ## Event Model
@@ -20,10 +22,12 @@
 - `Event.ID` is caller-owned and is the primary subscription key.
 - `Event.NativeID` is the runtime-native session ID that emitted the event.
 - `Event.PrimaryNativeID` is the first native session observed for a caller session by `ingest.Receiver`.
-- `Event.NativeSessionRole` is `primary`, `subsession`, or unknown; use it to avoid treating subagent `Stop` events as caller-session idle.
+- `Event.NativeSessionRole` is `primary`, `subsession`, or unknown; use it to avoid treating subagent `Stop`/`idle` events as caller-session idle.
 - `Event.Status` is native-session scoped, not an aggregate caller-session status.
-- `Event.Raw` preserves native diagnostic payloads; for Codex this is the full hook envelope.
-- Codex `Stop` means the turn is idle, not that the process exited.
+- `Event.Raw` preserves native diagnostic payloads; contents vary by adapter.
+- Codex `Stop` and OpenCode `session.idle` mean the turn is idle, not that the process exited.
+- OpenCode subagent events: only `session.created` carries `parent_session_id`; all subsequent subagent events (status, tool) leave `PrimaryNativeID` and `NativeSessionRole` unset so `ingest.Receiver` can classify them correctly from its stored mapping.
+- OpenCode `question` tool (`tool.execute.before`) maps to `awaiting_input`; it is the primary permission/confirmation mechanism when the native `permission.asked` event does not fire.
 
 ## Design Rules
 

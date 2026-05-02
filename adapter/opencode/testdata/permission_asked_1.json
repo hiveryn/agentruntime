@@ -1,0 +1,18 @@
+{
+  "hook_event_name": "permission.asked",
+  "session_id": "ses_21873b6cbffeL3JOLPOFsrfKEt",
+  "parent_session_id": "",
+  "hiveryn_session_id": "hiv-opencode-capture-1",
+  "payload": {
+    "always": ["echo *"],
+    "id": "per_de78c94640017BC1vidruNZc7B",
+    "metadata": {},
+    "patterns": ["echo hiveryn-opencode-lab"],
+    "permission": "bash",
+    "sessionID": "ses_21873b6cbffeL3JOLPOFsrfKEt",
+    "tool": {
+      "callID": "call_KuqKK0jB1dYNkfUE6SmMHOwO",
+      "messageID": "msg_de78c8c210015K0wx3Z597HwP9"
+    }
+  }
+}
