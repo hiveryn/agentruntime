@@ -275,6 +275,176 @@ func TestPrepareLaunchReservedEnvEmptyValueAllowed(t *testing.T) {
 	}
 }
 
+func TestPrepareLaunch_MultipleMCPServers(t *testing.T) {
+	adapter := New(DefaultOptions())
+	req := agentruntime.StartRequest{
+		ID:      "session-1",
+		Agent:   agentruntime.AgentCodex,
+		Workdir: "/tmp/work",
+		MCPServers: []agentruntime.MCPServerConfig{
+			{
+				Name:    "stdio-srv",
+				Command: "cmd-a",
+				Args:    []string{"--flag"},
+				CWD:     "/opt",
+				Env:     map[string]string{"EXTRA": "val"},
+			},
+			{
+				Name:              "http-srv",
+				URL:               "http://127.0.0.1:4200/mcp",
+				BearerTokenEnvVar: "TOKEN",
+			},
+		},
+	}
+
+	spec, err := adapter.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	joined := strings.Join(spec.Args, "\x00")
+	for _, want := range []string{
+		"mcp_servers.stdio-srv.command=\"cmd-a\"",
+		"mcp_servers.stdio-srv.args=[\"--flag\"]",
+		"mcp_servers.stdio-srv.cwd=\"/opt\"",
+		"mcp_servers.stdio-srv.env={EXTRA=\"val\"}",
+		"mcp_servers.http-srv.url=\"http://127.0.0.1:4200/mcp\"",
+		"mcp_servers.http-srv.bearer_token_env_var=\"TOKEN\"",
+	} {
+		if !strings.Contains(joined, want) {
+			t.Fatalf("args missing %q\nargs=%q", want, spec.Args)
+		}
+	}
+}
+
+func TestPrepareLaunch_MCPStdioEnv(t *testing.T) {
+	adapter := New(DefaultOptions())
+	req := agentruntime.StartRequest{
+		ID:      "session-1",
+		Agent:   agentruntime.AgentCodex,
+		Workdir: "/tmp/work",
+		MCPServers: []agentruntime.MCPServerConfig{{
+			Name:    "my-server",
+			Command: "proxy",
+			Env:     map[string]string{"MY_ENV": "hello", "OTHER": "world"},
+		}},
+	}
+
+	spec, err := adapter.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	joined := strings.Join(spec.Args, "\x00")
+	for _, want := range []string{
+		"mcp_servers.my-server.command=\"proxy\"",
+		"mcp_servers.my-server.env={MY_ENV=\"hello\",OTHER=\"world\"}",
+	} {
+		if !strings.Contains(joined, want) {
+			t.Fatalf("args missing %q\nargs=%q", want, spec.Args)
+		}
+	}
+	if strings.Contains(joined, "cwd=") {
+		t.Fatalf("cwd should not appear when not set: %q", spec.Args)
+	}
+}
+
+func TestPrepareLaunch_MCPStdioCWDKey(t *testing.T) {
+	adapter := New(DefaultOptions())
+	req := agentruntime.StartRequest{
+		ID:      "session-1",
+		Agent:   agentruntime.AgentCodex,
+		Workdir: "/tmp/work",
+		MCPServers: []agentruntime.MCPServerConfig{{
+			Name:    "my-server",
+			Command: "proxy",
+			CWD:     "/opt/app",
+		}},
+	}
+
+	spec, err := adapter.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	joined := strings.Join(spec.Args, "\x00")
+	if !strings.Contains(joined, "mcp_servers.my-server.cwd=\"/opt/app\"") {
+		t.Fatalf("args missing cwd key: %q", spec.Args)
+	}
+}
+
+func TestPrepareLaunch_MCPHTTPWithoutToken(t *testing.T) {
+	adapter := New(DefaultOptions())
+	req := agentruntime.StartRequest{
+		ID:      "session-1",
+		Agent:   agentruntime.AgentCodex,
+		Workdir: "/tmp/work",
+		MCPServers: []agentruntime.MCPServerConfig{{
+			Name: "public-server",
+			URL:  "https://public-mcp.example.com/sse",
+		}},
+	}
+
+	spec, err := adapter.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	joined := strings.Join(spec.Args, "\x00")
+	for _, want := range []string{
+		"mcp_servers.public-server.url=\"https://public-mcp.example.com/sse\"",
+	} {
+		if !strings.Contains(joined, want) {
+			t.Fatalf("args missing %q\nargs=%q", want, spec.Args)
+		}
+	}
+	if strings.Contains(joined, "bearer_token_env_var") {
+		t.Fatalf("bearer_token_env_var should not appear without token: %q", spec.Args)
+	}
+}
+
+func TestPrepareLaunch_MCPNameValidation(t *testing.T) {
+	adapter := New(DefaultOptions())
+	req := agentruntime.StartRequest{
+		ID:      "session-1",
+		Agent:   agentruntime.AgentCodex,
+		Workdir: "/tmp/work",
+		MCPServers: []agentruntime.MCPServerConfig{{
+			Name:    "",
+			Command: "proxy",
+		}},
+	}
+
+	_, err := adapter.PrepareLaunch(context.Background(), req)
+	if err == nil {
+		t.Fatal("expected error for empty mcp server name")
+	}
+}
+
+func TestPrepareLaunch_MCPTOMLSpecialChars(t *testing.T) {
+	adapter := New(DefaultOptions())
+	req := agentruntime.StartRequest{
+		ID:      "session-1",
+		Agent:   agentruntime.AgentCodex,
+		Workdir: "/tmp/work",
+		MCPServers: []agentruntime.MCPServerConfig{{
+			Name:    "my-server",
+			Command: "proxy",
+			Env:     map[string]string{"KEY": `value with "quotes" and \backslash`},
+		}},
+	}
+
+	spec, err := adapter.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	joined := strings.Join(spec.Args, "\x00")
+	if !strings.Contains(joined, "\"value with \\\"quotes\\\" and \\\\backslash\"") {
+		t.Fatalf("args missing escaped value: %q", spec.Args)
+	}
+}
+
 func hasArgPair(args []string, key, value string) bool {
 	for i := 0; i+1 < len(args); i++ {
 		if args[i] == key && args[i+1] == value {

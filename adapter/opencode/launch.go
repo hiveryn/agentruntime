@@ -25,12 +25,12 @@ type ocMCPServer struct {
 }
 
 var managedArgs = map[string]struct{}{
-	"--prompt":    {},
-	"--agent":     {},
-	"--continue":  {},
-	"-c":          {},
-	"--session":   {},
-	"-s":          {},
+	"--prompt":   {},
+	"--agent":    {},
+	"--continue": {},
+	"-c":         {},
+	"--session":  {},
+	"-s":         {},
 }
 
 func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest) (agentruntime.LaunchSpec, error) {

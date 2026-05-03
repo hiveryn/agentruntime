@@ -246,6 +246,247 @@ func TestPrepareLaunchReservedEnvEmptyValueAllowed(t *testing.T) {
 	}
 }
 
+func TestPrepareLaunch_MultipleMCPServers(t *testing.T) {
+	adapter := New(DefaultOptions())
+	req := agentruntime.StartRequest{
+		ID:      "session-1",
+		Agent:   agentruntime.AgentClaude,
+		Workdir: "/tmp/work",
+		MCPServers: []agentruntime.MCPServerConfig{
+			{
+				Name:    "stdio-srv",
+				Command: "cmd-a",
+				Args:    []string{"--flag"},
+				CWD:     "/opt",
+				Env:     map[string]string{"EXTRA": "val"},
+			},
+			{
+				Name:              "http-srv",
+				URL:               "https://api.example.com/mcp",
+				BearerTokenEnvVar: "TOKEN",
+			},
+		},
+	}
+
+	spec, err := adapter.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(spec.CleanupPaths) != 1 {
+		t.Fatalf("expected 1 cleanup path, got %d: %#v", len(spec.CleanupPaths), spec.CleanupPaths)
+	}
+
+	config := readMCPConfig(t, spec.CleanupPaths[0])
+	if len(config.MCPServers) != 2 {
+		t.Fatalf("expected 2 mcp servers, got %d: %#v", len(config.MCPServers), config.MCPServers)
+	}
+
+	stdio := config.MCPServers["stdio-srv"]
+	if stdio.Type != "stdio" || stdio.Command != "cmd-a" {
+		t.Fatalf("stdio server: %#v", stdio)
+	}
+	if len(stdio.Args) != 1 || stdio.Args[0] != "--flag" {
+		t.Fatalf("stdio server args: %#v", stdio.Args)
+	}
+	if stdio.Env["PWD"] != "/opt" {
+		t.Fatalf("stdio server PWD: %q", stdio.Env["PWD"])
+	}
+	if stdio.Env["EXTRA"] != "val" {
+		t.Fatalf("stdio server EXTRA: %q", stdio.Env["EXTRA"])
+	}
+
+	httpSrv := config.MCPServers["http-srv"]
+	if httpSrv.Type != "http" || httpSrv.URL != "https://api.example.com/mcp" {
+		t.Fatalf("http server: %#v", httpSrv)
+	}
+	if httpSrv.Headers["Authorization"] != "Bearer ${TOKEN}" {
+		t.Fatalf("http server headers: %#v", httpSrv.Headers)
+	}
+
+	for _, path := range spec.CleanupPaths {
+		_ = os.Remove(path)
+	}
+}
+
+func TestPrepareLaunch_MCPStdioEnvPreservation(t *testing.T) {
+	adapter := New(DefaultOptions())
+	req := agentruntime.StartRequest{
+		ID:      "session-1",
+		Agent:   agentruntime.AgentClaude,
+		Workdir: "/tmp/work",
+		MCPServers: []agentruntime.MCPServerConfig{{
+			Name:    "my-server",
+			Command: "proxy",
+			Args:    []string{"--listen", "0.0.0.0:8080"},
+			Env:     map[string]string{"MY_ENV": "hello", "OTHER": "world"},
+		}},
+	}
+
+	spec, err := adapter.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	config := readMCPConfig(t, spec.CleanupPaths[0])
+	server := config.MCPServers["my-server"]
+	if server.Type != "stdio" || server.Command != "proxy" {
+		t.Fatalf("server: %#v", server)
+	}
+	if server.Env["MY_ENV"] != "hello" {
+		t.Fatalf("env MY_ENV: %q", server.Env["MY_ENV"])
+	}
+	if server.Env["OTHER"] != "world" {
+		t.Fatalf("env OTHER: %q", server.Env["OTHER"])
+	}
+	if _, ok := server.Env["PWD"]; ok {
+		t.Fatalf("PWD should not be present when CWD is not set: %#v", server.Env)
+	}
+
+	for _, path := range spec.CleanupPaths {
+		_ = os.Remove(path)
+	}
+}
+
+func TestPrepareLaunch_MCPStdioCWDOnly(t *testing.T) {
+	adapter := New(DefaultOptions())
+	req := agentruntime.StartRequest{
+		ID:      "session-1",
+		Agent:   agentruntime.AgentClaude,
+		Workdir: "/tmp/work",
+		MCPServers: []agentruntime.MCPServerConfig{{
+			Name:    "my-server",
+			Command: "proxy",
+			CWD:     "/opt/app",
+		}},
+	}
+
+	spec, err := adapter.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	config := readMCPConfig(t, spec.CleanupPaths[0])
+	server := config.MCPServers["my-server"]
+	if server.Env["PWD"] != "/opt/app" {
+		t.Fatalf("PWD: got %q", server.Env["PWD"])
+	}
+	if len(server.Env) != 1 {
+		t.Fatalf("expected exactly 1 env entry (PWD only), got %d: %#v", len(server.Env), server.Env)
+	}
+
+	for _, path := range spec.CleanupPaths {
+		_ = os.Remove(path)
+	}
+}
+
+func TestPrepareLaunch_MCPStdioPWDOverride(t *testing.T) {
+	adapter := New(DefaultOptions())
+	req := agentruntime.StartRequest{
+		ID:      "session-1",
+		Agent:   agentruntime.AgentClaude,
+		Workdir: "/tmp/work",
+		MCPServers: []agentruntime.MCPServerConfig{{
+			Name:    "my-server",
+			Command: "proxy",
+			CWD:     "/from-cwd",
+			Env:     map[string]string{"PWD": "/from-env"},
+		}},
+	}
+
+	spec, err := adapter.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	config := readMCPConfig(t, spec.CleanupPaths[0])
+	server := config.MCPServers["my-server"]
+	if server.Env["PWD"] != "/from-cwd" {
+		t.Fatalf("PWD should be overridden by CWD: got %q", server.Env["PWD"])
+	}
+
+	for _, path := range spec.CleanupPaths {
+		_ = os.Remove(path)
+	}
+}
+
+func TestPrepareLaunch_MCPHTTPWithoutToken(t *testing.T) {
+	adapter := New(DefaultOptions())
+	req := agentruntime.StartRequest{
+		ID:      "session-1",
+		Agent:   agentruntime.AgentClaude,
+		Workdir: "/tmp/work",
+		MCPServers: []agentruntime.MCPServerConfig{{
+			Name: "public-server",
+			URL:  "https://public-mcp.example.com/sse",
+		}},
+	}
+
+	spec, err := adapter.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	config := readMCPConfig(t, spec.CleanupPaths[0])
+	server := config.MCPServers["public-server"]
+	if server.Type != "http" || server.URL != "https://public-mcp.example.com/sse" {
+		t.Fatalf("server: %#v", server)
+	}
+	if len(server.Headers) != 0 {
+		t.Fatalf("expected no headers without bearer token, got: %#v", server.Headers)
+	}
+
+	for _, path := range spec.CleanupPaths {
+		_ = os.Remove(path)
+	}
+}
+
+func TestPrepareLaunch_MCPTempFilePermissions(t *testing.T) {
+	adapter := New(DefaultOptions())
+	req := agentruntime.StartRequest{
+		ID:      "session-1",
+		Agent:   agentruntime.AgentClaude,
+		Workdir: "/tmp/work",
+		MCPServers: []agentruntime.MCPServerConfig{{
+			Name:    "my-server",
+			Command: "proxy",
+		}},
+	}
+
+	spec, err := adapter.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(spec.CleanupPaths) != 1 {
+		t.Fatalf("expected 1 cleanup path, got %d", len(spec.CleanupPaths))
+	}
+
+	info, err := os.Stat(spec.CleanupPaths[0])
+	if err != nil {
+		t.Fatalf("stat mcp config: %v", err)
+	}
+	if info.Mode().Perm() != 0o600 {
+		t.Fatalf("expected 0600 permissions on mcp config file, got %04o", info.Mode().Perm())
+	}
+
+	for _, path := range spec.CleanupPaths {
+		_ = os.Remove(path)
+	}
+}
+
+func TestPrepareLaunch_MCPNameValidation(t *testing.T) {
+	adapter := New(DefaultOptions())
+	req := agentruntime.StartRequest{
+		ID:      "session-1",
+		Agent:   agentruntime.AgentClaude,
+		Workdir: "/tmp/work",
+		MCPServers: []agentruntime.MCPServerConfig{{
+			Name:    "",
+			Command: "proxy",
+		}},
+	}
+
+	_, err := adapter.PrepareLaunch(context.Background(), req)
+	if err == nil {
+		t.Fatal("expected error for empty mcp server name")
+	}
+}
+
 func hasArgPair(args []string, key, value string) bool {
 	for i := 0; i+1 < len(args); i++ {
 		if args[i] == key && args[i+1] == value {

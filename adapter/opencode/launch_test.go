@@ -457,6 +457,194 @@ func TestPrepareLaunch_RawAgentArgRejected(t *testing.T) {
 	}
 }
 
+func TestPrepareLaunch_MultipleMCPServers(t *testing.T) {
+	a := New(DefaultOptions())
+	req := baseReq()
+	req.MCPServers = []agentruntime.MCPServerConfig{
+		{
+			Name:    "stdio-srv",
+			Command: "cmd-a",
+			Args:    []string{"--flag"},
+			CWD:     "/opt",
+			Env:     map[string]string{"EXTRA": "val"},
+		},
+		{
+			Name:              "http-srv",
+			URL:               "https://api.example.com/mcp",
+			BearerTokenEnvVar: "TOKEN",
+		},
+	}
+	spec, err := a.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var cfg ocConfig
+	if err := json.Unmarshal([]byte(spec.Env["OPENCODE_CONFIG_CONTENT"]), &cfg); err != nil {
+		t.Fatalf("parse OPENCODE_CONFIG_CONTENT: %v", err)
+	}
+	if len(cfg.MCP) != 2 {
+		t.Fatalf("expected 2 mcp servers, got %d: %#v", len(cfg.MCP), cfg.MCP)
+	}
+
+	stdio := cfg.MCP["stdio-srv"]
+	if stdio.Type != "local" {
+		t.Fatalf("stdio server type: %q", stdio.Type)
+	}
+	if !stdio.Enabled {
+		t.Error("stdio server expected Enabled=true")
+	}
+	if len(stdio.Command) == 0 || stdio.Command[0] != "cmd-a" {
+		t.Errorf("stdio server command: %v", stdio.Command)
+	}
+	if stdio.Environment["PWD"] != "/opt" {
+		t.Errorf("stdio server PWD: %q", stdio.Environment["PWD"])
+	}
+	if stdio.Environment["EXTRA"] != "val" {
+		t.Errorf("stdio server EXTRA: %q", stdio.Environment["EXTRA"])
+	}
+
+	httpSrv := cfg.MCP["http-srv"]
+	if httpSrv.Type != "remote" {
+		t.Fatalf("http server type: %q", httpSrv.Type)
+	}
+	if httpSrv.URL != "https://api.example.com/mcp" {
+		t.Errorf("http server URL: %q", httpSrv.URL)
+	}
+	if !strings.Contains(httpSrv.Headers["Authorization"], "TOKEN") {
+		t.Errorf("http server Authorization header: %q", httpSrv.Headers["Authorization"])
+	}
+}
+
+func TestPrepareLaunch_MCPStdioEnvPreservation(t *testing.T) {
+	a := New(DefaultOptions())
+	req := baseReq()
+	req.MCPServers = []agentruntime.MCPServerConfig{{
+		Name:    "my-tools",
+		Command: "proxy",
+		Args:    []string{"--listen", "0.0.0.0:8080"},
+		Env:     map[string]string{"MY_ENV": "hello", "OTHER": "world"},
+	}}
+	spec, err := a.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var cfg ocConfig
+	if err := json.Unmarshal([]byte(spec.Env["OPENCODE_CONFIG_CONTENT"]), &cfg); err != nil {
+		t.Fatalf("parse OPENCODE_CONFIG_CONTENT: %v", err)
+	}
+	srv := cfg.MCP["my-tools"]
+	if srv.Environment["MY_ENV"] != "hello" {
+		t.Errorf("env MY_ENV: %q", srv.Environment["MY_ENV"])
+	}
+	if srv.Environment["OTHER"] != "world" {
+		t.Errorf("env OTHER: %q", srv.Environment["OTHER"])
+	}
+	if _, ok := srv.Environment["PWD"]; ok {
+		t.Error("PWD should not be present when CWD is not set")
+	}
+}
+
+func TestPrepareLaunch_MCPStdioCWDAndEnvPreservation(t *testing.T) {
+	a := New(DefaultOptions())
+	req := baseReq()
+	req.MCPServers = []agentruntime.MCPServerConfig{{
+		Name:    "my-tools",
+		Command: "proxy",
+		CWD:     "/srv",
+		Env:     map[string]string{"MY_ENV": "hello"},
+	}}
+	spec, err := a.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var cfg ocConfig
+	if err := json.Unmarshal([]byte(spec.Env["OPENCODE_CONFIG_CONTENT"]), &cfg); err != nil {
+		t.Fatalf("parse OPENCODE_CONFIG_CONTENT: %v", err)
+	}
+	srv := cfg.MCP["my-tools"]
+	if srv.Environment["PWD"] != "/srv" {
+		t.Errorf("PWD: %q", srv.Environment["PWD"])
+	}
+	if srv.Environment["MY_ENV"] != "hello" {
+		t.Errorf("MY_ENV: %q", srv.Environment["MY_ENV"])
+	}
+	if len(srv.Environment) != 2 {
+		t.Errorf("expected 2 env entries (PWD + MY_ENV), got %d: %#v", len(srv.Environment), srv.Environment)
+	}
+}
+
+func TestPrepareLaunch_MCPStdioPWDOverride(t *testing.T) {
+	a := New(DefaultOptions())
+	req := baseReq()
+	req.MCPServers = []agentruntime.MCPServerConfig{{
+		Name:    "my-tools",
+		Command: "proxy",
+		CWD:     "/from-cwd",
+		Env:     map[string]string{"PWD": "/from-env"},
+	}}
+	spec, err := a.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var cfg ocConfig
+	if err := json.Unmarshal([]byte(spec.Env["OPENCODE_CONFIG_CONTENT"]), &cfg); err != nil {
+		t.Fatalf("parse OPENCODE_CONFIG_CONTENT: %v", err)
+	}
+	srv := cfg.MCP["my-tools"]
+	if srv.Environment["PWD"] != "/from-cwd" {
+		t.Fatalf("PWD should be overridden by CWD: got %q", srv.Environment["PWD"])
+	}
+}
+
+func TestPrepareLaunch_MCPHTTPWithoutToken(t *testing.T) {
+	a := New(DefaultOptions())
+	req := baseReq()
+	req.MCPServers = []agentruntime.MCPServerConfig{{
+		Name: "public-server",
+		URL:  "https://public-mcp.example.com/sse",
+	}}
+	spec, err := a.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var cfg ocConfig
+	if err := json.Unmarshal([]byte(spec.Env["OPENCODE_CONFIG_CONTENT"]), &cfg); err != nil {
+		t.Fatalf("parse OPENCODE_CONFIG_CONTENT: %v", err)
+	}
+	srv := cfg.MCP["public-server"]
+	if srv.Type != "remote" {
+		t.Errorf("type: got %q want %q", srv.Type, "remote")
+	}
+	if srv.URL != "https://public-mcp.example.com/sse" {
+		t.Errorf("URL: got %q", srv.URL)
+	}
+	if !srv.Enabled {
+		t.Error("expected Enabled=true")
+	}
+	if len(srv.Headers) != 0 {
+		t.Errorf("expected no headers without bearer token: %#v", srv.Headers)
+	}
+}
+
+func TestPrepareLaunch_MCPNameValidation(t *testing.T) {
+	a := New(DefaultOptions())
+	req := baseReq()
+	req.MCPServers = []agentruntime.MCPServerConfig{{
+		Name:    "",
+		Command: "proxy",
+	}}
+
+	_, err := a.PrepareLaunch(context.Background(), req)
+	if err == nil {
+		t.Fatal("expected error for empty mcp server name")
+	}
+}
+
 func TestPrepareLaunch_ArgOrdering(t *testing.T) {
 	a := New(DefaultOptions())
 	req := baseReq()
