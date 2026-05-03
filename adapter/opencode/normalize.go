@@ -109,11 +109,11 @@ func (a *Adapter) NormalizeEvent(_ context.Context, data []byte) (*agentruntime.
 		At:                time.Now(),
 		Metadata:          emptyNil(meta),
 		Raw: map[string]any{
-			"hook_event_name":        env.HookEventName,
-			"session_id":             env.SessionID,
-			"parent_session_id":      env.ParentSessionID,
+			"hook_event_name":         env.HookEventName,
+			"session_id":              env.SessionID,
+			"parent_session_id":       env.ParentSessionID,
 			"agentruntime_session_id": env.SessionCorrelationID,
-			"payload":                env.Payload,
+			"payload":                 env.Payload,
 		},
 	}, nil
 }
