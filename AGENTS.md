@@ -6,13 +6,13 @@
 
 - This repo owns launch specs, setup specs, native hook normalization, and in-process event ingest.
 - Callers own process lifecycle, ptys, terminal rendering, persistence, auth, product workflows, and UI event streams.
-- Do not add Hiveryn ticket, architect, collab, conclusion, or filesystem workflow concepts here.
+- Do not add ticket, architect, collab, conclusion, or filesystem workflow concepts here (caller-owned concerns).
 
 ## Package Layout
 
 - Root package: shared public types and the `Adapter` interface.
 - `adapter/<agent>`: agent-specific launch synthesis, hook setup, and native event normalization.
-- `adapter/codex`: uses `HIVERYN_SESSION_ID` for caller-owned correlation; hook setup writes `~/.codex/hooks.json`.
+- `adapter/codex`: uses `AGENTRUNTIME_SESSION_ID` for caller-owned correlation; hook setup writes `~/.codex/hooks.json`.
 - `adapter/claude`: uses `--session-id` UUID for native correlation; hook setup writes `~/.claude/settings.json`.
 - `adapter/opencode`: uses `OPENCODE_CONFIG_CONTENT` for per-session config; hook setup writes a TypeScript plugin to `~/.config/opencode/plugins/`; plugin POSTs events to `<endpoint>/opencode`.
 - `ingest`: reusable in-process event hub, primitive byte-ingest API, and optional local HTTP hook handler.

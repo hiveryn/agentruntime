@@ -6,7 +6,7 @@ Current first-class adapters: `codex`, `claude`, and `opencode`.
 
 ## Status
 
-`v0.x.y` - pre-v1. APIs may change while the module is being exercised by Hiveryn daemon and desktop integrations.
+`v0.x.y` - pre-v1. APIs may change while the module is being exercised by downstream integrations.
 
 ## Examples
 
