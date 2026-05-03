@@ -12,8 +12,8 @@
 
 - Root package: shared public types and the `Adapter` interface.
 - `adapter/<agent>`: agent-specific launch synthesis, hook setup, and native event normalization.
-- `adapter/codex`: uses `AGENTRUNTIME_SESSION_ID` for caller-owned correlation; hook setup writes `~/.codex/hooks.json`.
-- `adapter/claude`: uses `--session-id` UUID for native correlation; hook setup writes `~/.claude/settings.json`.
+- `adapter/codex`: uses `AGENTRUNTIME_SESSION_ID` for caller-owned correlation; hook setup writes `~/.codex/hooks.json`; `codex.HookCommand(endpoint)` generates a self-contained node hook command.
+- `adapter/claude`: uses `--session-id` UUID for native correlation; hook setup writes `~/.claude/settings.json`; `claude.HookCommand(endpoint)` generates a self-contained node hook command.
 - `adapter/opencode`: uses `OPENCODE_CONFIG_CONTENT` for per-session config; hook setup writes a TypeScript plugin to `~/.config/opencode/plugins/`; plugin POSTs events to `<endpoint>/opencode`.
 - `ingest`: reusable in-process event hub, primitive byte-ingest API, and optional local HTTP hook handler.
 

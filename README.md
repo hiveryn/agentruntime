@@ -49,8 +49,9 @@ idempotent for the same marker and hook target. It writes:
 - Claude Code: `~/.claude/settings.json`
 - OpenCode: `~/.config/opencode/plugins/agentruntime-<marker>.ts`
 
-Codex and Claude Code setup use `HookCommand.Command`, usually a command that
-POSTs hook JSON to your local receiver. OpenCode setup uses
+Codex and Claude Code setup use `codex.HookCommand(endpoint)` /
+`claude.HookCommand(endpoint)` to generate canonical hook commands that post
+enveloped native hook JSON to your receiver. OpenCode setup uses
 `HookCommand.Endpoint`; the generated plugin POSTs to `<endpoint>/opencode`.
 
 Call `RemoveSetup` when your integration is disabled, uninstalled, or changing
@@ -140,16 +141,14 @@ func main() {
 	}()
 
 	mux := http.NewServeMux()
-	mux.Handle("/hook", receiver.Handler(agentruntime.AgentCodex))
+	mux.Handle("/codex", receiver.Handler(agentruntime.AgentCodex))
 	go func() {
 		log.Fatal(http.ListenAndServe("127.0.0.1:9000", mux))
 	}()
 
 	_, err := adapter.EnsureSetup(ctx, agentruntime.SetupRequest{
 		Marker: "example",
-		Hook: agentruntime.HookCommand{
-			Command: "curl -s -X POST --data-binary @- http://127.0.0.1:9000/hook",
-		},
+		Hook:  codex.HookCommand("http://127.0.0.1:9000"),
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -201,16 +200,14 @@ func main() {
 	}()
 
 	mux := http.NewServeMux()
-	mux.Handle("/hook", receiver.Handler(agentruntime.AgentClaude))
+	mux.Handle("/claude", receiver.Handler(agentruntime.AgentClaude))
 	go func() {
 		log.Fatal(http.ListenAndServe("127.0.0.1:9000", mux))
 	}()
 
 	_, err := adapter.EnsureSetup(ctx, agentruntime.SetupRequest{
 		Marker: "example",
-		Hook: agentruntime.HookCommand{
-			Command: "curl -s -X POST --data-binary @- http://127.0.0.1:9000/hook",
-		},
+		Hook:  claude.HookCommand("http://127.0.0.1:9000"),
 	})
 	if err != nil {
 		log.Fatal(err)
