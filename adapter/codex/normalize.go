@@ -49,7 +49,7 @@ func normalizeEnvelope(env envelope) (*agentruntime.Event, error) {
 	}
 
 	nativeID, _ := env.Hook["session_id"].(string)
-	id := env.Env["HIVERYN_SESSION_ID"]
+	id := env.Env["AGENTRUNTIME_SESSION_ID"]
 	if id == "" {
 		id = nativeID
 	}
@@ -59,9 +59,6 @@ func normalizeEnvelope(env envelope) (*agentruntime.Event, error) {
 	copyHookString(meta, "turn_id", env.Hook)
 	copyHookString(meta, "cwd", env.Hook)
 	copyHookString(meta, "model", env.Hook)
-	copyEnvString(meta, "session_kind", env.Env, "HIVERYN_SESSION_KIND")
-	copyEnvString(meta, "architect_folder", env.Env, "HIVERYN_ARCHITECT_FOLDER")
-	copyEnvString(meta, "ticket_id", env.Env, "HIVERYN_TICKET_ID")
 
 	return &agentruntime.Event{
 		ID:       id,
@@ -127,12 +124,6 @@ func normalizeTool(tool string) string {
 
 func copyHookString(dst map[string]string, key string, src map[string]any) {
 	if value, _ := src[key].(string); value != "" {
-		dst[key] = value
-	}
-}
-
-func copyEnvString(dst map[string]string, key string, src map[string]string, envKey string) {
-	if value := src[envKey]; value != "" {
 		dst[key] = value
 	}
 }

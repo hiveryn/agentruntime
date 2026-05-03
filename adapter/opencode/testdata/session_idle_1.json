@@ -2,7 +2,7 @@
   "hook_event_name": "session.idle",
   "session_id": "ses_21873b6cbffeL3JOLPOFsrfKEt",
   "parent_session_id": "",
-  "hiveryn_session_id": "hiv-opencode-capture-1",
+  "agentruntime_session_id": "hiv-opencode-capture-1",
   "payload": {
     "sessionID": "ses_21873b6cbffeL3JOLPOFsrfKEt"
   }

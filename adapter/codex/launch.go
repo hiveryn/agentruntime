@@ -27,27 +27,6 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 	}
 
 	args := make([]string, 0, len(req.Args)+8)
-	if a.options.NoAltScreen {
-		args = append(args, "--no-alt-screen")
-	}
-	if a.options.EnableHooks {
-		args = append(args, "--enable", "codex_hooks")
-	}
-	if a.options.Sandbox != "" {
-		args = append(args, "--sandbox", a.options.Sandbox)
-	}
-	if a.options.ApprovalPolicy != "" {
-		args = append(args, "--config", tomlKV("approval_policy", a.options.ApprovalPolicy))
-	}
-	if a.options.SkipGitRepoCheck {
-		args = append(args, "--skip-git-repo-check")
-	}
-	if a.options.Model != "" {
-		args = append(args, "--model", a.options.Model)
-	}
-	if a.options.Profile != "" {
-		args = append(args, "--profile", a.options.Profile)
-	}
 	if strings.TrimSpace(req.Instructions) != "" {
 		// Keep durable session/role instructions additive by injecting them as a
 		// separate developer message instead of replacing Codex base instructions.
@@ -69,17 +48,8 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 	}
 
 	env := mergeEnv(req.Env, map[string]string{
-		"HIVERYN_SESSION_ID": req.ID,
+		"AGENTRUNTIME_SESSION_ID": req.ID,
 	})
-	if value := req.Metadata["session_kind"]; value != "" {
-		env["HIVERYN_SESSION_KIND"] = value
-	}
-	if value := req.Metadata["architect_folder"]; value != "" {
-		env["HIVERYN_ARCHITECT_FOLDER"] = value
-	}
-	if value := req.Metadata["ticket_id"]; value != "" {
-		env["HIVERYN_TICKET_ID"] = value
-	}
 
 	return agentruntime.LaunchSpec{
 		Command: command,
@@ -119,13 +89,6 @@ func mcpConfigArgs(server agentruntime.MCPServerConfig) ([]string, error) {
 		if len(server.Env) > 0 {
 			add("env", tomlStringMap(server.Env))
 		}
-	}
-
-	if server.DefaultToolsApprovalMode != "" {
-		add("default_tools_approval_mode", quoteTOML(server.DefaultToolsApprovalMode))
-	}
-	if server.ApprovalMode != "" {
-		add("approval_mode", quoteTOML(server.ApprovalMode))
 	}
 
 	return out, nil

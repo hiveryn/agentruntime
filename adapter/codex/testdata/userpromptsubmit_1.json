@@ -1,8 +1,6 @@
 {
   "env": {
-    "HIVERYN_ARCHITECT_FOLDER": "/tmp/hiveryn-lab-architect",
-    "HIVERYN_SESSION_ID": "hiveryn-lab-homehooks-1",
-    "HIVERYN_SESSION_KIND": "worker"
+    "AGENTRUNTIME_SESSION_ID": "hiveryn-lab-homehooks-1"
   },
   "hook": {
     "cwd": "/tmp/work",

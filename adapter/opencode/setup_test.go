@@ -56,8 +56,8 @@ func TestEnsureSetup_EmptyDir(t *testing.T) {
 	if !strings.Contains(content, "http://127.0.0.1:9000/opencode") {
 		t.Error("plugin missing endpoint URL")
 	}
-	if !strings.Contains(content, "HIVERYN_SESSION_ID") {
-		t.Error("plugin missing HIVERYN_SESSION_ID reference")
+	if !strings.Contains(content, "AGENTRUNTIME_SESSION_ID") {
+		t.Error("plugin missing AGENTRUNTIME_SESSION_ID reference")
 	}
 }
 

@@ -19,12 +19,11 @@ func TestPrepareLaunchInteractiveWithMCP(t *testing.T) {
 		Workdir:      "/tmp/work",
 		Prompt:       "Summarize this repository.",
 		Instructions: "Be terse. Prefer bullets.",
-		Env:          map[string]string{"HIVERYN_SESSION_KIND": "architect"},
 		MCPServers: []agentruntime.MCPServerConfig{{
-			Name:    "hiveryn",
-			Command: "hiveryn-mcp-proxy",
+			Name:    "my-server",
+			Command: "my-mcp-proxy",
 			Args:    []string{"--daemon", "http://127.0.0.1:4200"},
-			CWD:     "/tmp/architect",
+			CWD:     "/tmp/work",
 		}},
 	}
 
@@ -47,28 +46,22 @@ func TestPrepareLaunchInteractiveWithMCP(t *testing.T) {
 	if len(spec.CleanupPaths) != 1 {
 		t.Fatalf("CleanupPaths: %#v", spec.CleanupPaths)
 	}
-	if spec.Env["HIVERYN_SESSION_ID"] != "hiv-claude-1" {
-		t.Fatalf("HIVERYN_SESSION_ID: %q", spec.Env["HIVERYN_SESSION_ID"])
-	}
-	if spec.Env["HIVERYN_SESSION_KIND"] != "architect" {
-		t.Fatalf("HIVERYN_SESSION_KIND: %q", spec.Env["HIVERYN_SESSION_KIND"])
-	}
-	if _, ok := spec.Env["HIVERYN_TICKET_ID"]; ok {
-		t.Fatal("HIVERYN_TICKET_ID should not be set when not in req.Env")
+	if spec.Env["AGENTRUNTIME_SESSION_ID"] != "hiv-claude-1" {
+		t.Fatalf("AGENTRUNTIME_SESSION_ID: %q", spec.Env["AGENTRUNTIME_SESSION_ID"])
 	}
 
 	config := readMCPConfig(t, spec.CleanupPaths[0])
-	server, ok := config.MCPServers["hiveryn"]
+	server, ok := config.MCPServers["my-server"]
 	if !ok {
-		t.Fatalf("missing hiveryn server: %#v", config.MCPServers)
+		t.Fatalf("missing my-server: %#v", config.MCPServers)
 	}
-	if server.Type != "stdio" || server.Command != "hiveryn-mcp-proxy" {
+	if server.Type != "stdio" || server.Command != "my-mcp-proxy" {
 		t.Fatalf("server: %#v", server)
 	}
 	if len(server.Args) != 2 || server.Args[1] != "http://127.0.0.1:4200" {
 		t.Fatalf("server args: %#v", server.Args)
 	}
-	if server.Env["PWD"] != "/tmp/architect" {
+	if server.Env["PWD"] != "/tmp/work" {
 		t.Fatalf("server env: %#v", server.Env)
 	}
 
@@ -87,14 +80,11 @@ func TestPrepareLaunchHTTPMCPAndAppendInstructions(t *testing.T) {
 		Agent:        agentruntime.AgentClaude,
 		Workdir:      "/repo",
 		Instructions: "Use the project MCP server when relevant.",
-		Env: map[string]string{
-			"HIVERYN_MCP_TOKEN": "secret",
-			"HIVERYN_TICKET_ID": "2026-05-01-0915-test",
-		},
+		Env:          map[string]string{"MY_MCP_TOKEN": "secret"},
 		MCPServers: []agentruntime.MCPServerConfig{{
-			Name:              "hiveryn",
+			Name:              "my-server",
 			URL:               "https://127.0.0.1:4200/mcp/worker-1",
-			BearerTokenEnvVar: "HIVERYN_MCP_TOKEN",
+			BearerTokenEnvVar: "MY_MCP_TOKEN",
 		}},
 	}
 
@@ -105,16 +95,16 @@ func TestPrepareLaunchHTTPMCPAndAppendInstructions(t *testing.T) {
 	if !hasArgPair(spec.Args, "--append-system-prompt", req.Instructions) {
 		t.Fatalf("args missing append system prompt flag: %q", spec.Args)
 	}
-	if spec.Env["HIVERYN_TICKET_ID"] != "2026-05-01-0915-test" || spec.Env["HIVERYN_MCP_TOKEN"] != "secret" {
+	if spec.Env["MY_MCP_TOKEN"] != "secret" {
 		t.Fatalf("env: %#v", spec.Env)
 	}
 
 	config := readMCPConfig(t, spec.CleanupPaths[0])
-	server := config.MCPServers["hiveryn"]
+	server := config.MCPServers["my-server"]
 	if server.Type != "http" || server.URL != "https://127.0.0.1:4200/mcp/worker-1" {
 		t.Fatalf("server: %#v", server)
 	}
-	if server.Headers["Authorization"] != "Bearer ${HIVERYN_MCP_TOKEN}" {
+	if server.Headers["Authorization"] != "Bearer ${MY_MCP_TOKEN}" {
 		t.Fatalf("server headers: %#v", server.Headers)
 	}
 

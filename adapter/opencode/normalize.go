@@ -29,11 +29,11 @@ var droppedByDesign = map[string]struct{}{
 }
 
 type envelope struct {
-	HookEventName    string         `json:"hook_event_name"`
-	SessionID        string         `json:"session_id"`
-	ParentSessionID  string         `json:"parent_session_id"`
-	HiverynSessionID string         `json:"hiveryn_session_id"`
-	Payload          map[string]any `json:"payload"`
+	HookEventName        string         `json:"hook_event_name"`
+	SessionID            string         `json:"session_id"`
+	ParentSessionID      string         `json:"parent_session_id"`
+	SessionCorrelationID string         `json:"agentruntime_session_id"`
+	Payload              map[string]any `json:"payload"`
 }
 
 func (a *Adapter) NormalizeEvent(_ context.Context, data []byte) (*agentruntime.Event, error) {
@@ -76,7 +76,7 @@ func (a *Adapter) NormalizeEvent(_ context.Context, data []byte) (*agentruntime.
 		}
 	}
 
-	id := env.HiverynSessionID
+	id := env.SessionCorrelationID
 	if id == "" {
 		id = env.SessionID
 	}
@@ -109,11 +109,11 @@ func (a *Adapter) NormalizeEvent(_ context.Context, data []byte) (*agentruntime.
 		At:                time.Now(),
 		Metadata:          emptyNil(meta),
 		Raw: map[string]any{
-			"hook_event_name":    env.HookEventName,
-			"session_id":         env.SessionID,
-			"parent_session_id":  env.ParentSessionID,
-			"hiveryn_session_id": env.HiverynSessionID,
-			"payload":            env.Payload,
+			"hook_event_name":        env.HookEventName,
+			"session_id":             env.SessionID,
+			"parent_session_id":      env.ParentSessionID,
+			"agentruntime_session_id": env.SessionCorrelationID,
+			"payload":                env.Payload,
 		},
 	}, nil
 }

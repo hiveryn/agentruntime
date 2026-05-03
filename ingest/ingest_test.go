@@ -53,7 +53,7 @@ func TestReceiverIngestPublishesMatchingSession(t *testing.T) {
 func TestReceiverClassifiesSubsessionEvents(t *testing.T) {
 	receiver := NewReceiver(codex.New(codex.DefaultOptions()))
 
-	primary, err := receiver.Ingest(context.Background(), agentruntime.AgentCodex, []byte(`{"hook":{"hook_event_name":"SessionStart","session_id":"native-primary"},"env":{"HIVERYN_SESSION_ID":"caller-1"}}`))
+	primary, err := receiver.Ingest(context.Background(), agentruntime.AgentCodex, []byte(`{"hook":{"hook_event_name":"SessionStart","session_id":"native-primary"},"env":{"AGENTRUNTIME_SESSION_ID":"caller-1"}}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -64,7 +64,7 @@ func TestReceiverClassifiesSubsessionEvents(t *testing.T) {
 		t.Fatalf("primary native ID: %q", primary.PrimaryNativeID)
 	}
 
-	subsession, err := receiver.Ingest(context.Background(), agentruntime.AgentCodex, []byte(`{"hook":{"hook_event_name":"SessionStart","session_id":"native-sub"},"env":{"HIVERYN_SESSION_ID":"caller-1"}}`))
+	subsession, err := receiver.Ingest(context.Background(), agentruntime.AgentCodex, []byte(`{"hook":{"hook_event_name":"SessionStart","session_id":"native-sub"},"env":{"AGENTRUNTIME_SESSION_ID":"caller-1"}}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -75,7 +75,7 @@ func TestReceiverClassifiesSubsessionEvents(t *testing.T) {
 		t.Fatalf("subsession primary native ID: %q", subsession.PrimaryNativeID)
 	}
 
-	stop, err := receiver.Ingest(context.Background(), agentruntime.AgentCodex, []byte(`{"hook":{"hook_event_name":"Stop","session_id":"native-sub"},"env":{"HIVERYN_SESSION_ID":"caller-1"}}`))
+	stop, err := receiver.Ingest(context.Background(), agentruntime.AgentCodex, []byte(`{"hook":{"hook_event_name":"Stop","session_id":"native-sub"},"env":{"AGENTRUNTIME_SESSION_ID":"caller-1"}}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -89,7 +89,7 @@ func TestReceiverClassifiesSubsessionEvents(t *testing.T) {
 		t.Fatalf("stop primary native ID: %q", stop.PrimaryNativeID)
 	}
 
-	primaryStop, err := receiver.Ingest(context.Background(), agentruntime.AgentCodex, []byte(`{"hook":{"hook_event_name":"Stop","session_id":"native-primary"},"env":{"HIVERYN_SESSION_ID":"caller-1"}}`))
+	primaryStop, err := receiver.Ingest(context.Background(), agentruntime.AgentCodex, []byte(`{"hook":{"hook_event_name":"Stop","session_id":"native-primary"},"env":{"AGENTRUNTIME_SESSION_ID":"caller-1"}}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -101,7 +101,7 @@ func TestReceiverClassifiesSubsessionEvents(t *testing.T) {
 func TestReceiverLeavesRoleUnknownWithoutNativeID(t *testing.T) {
 	receiver := NewReceiver(codex.New(codex.DefaultOptions()))
 
-	event, err := receiver.Ingest(context.Background(), agentruntime.AgentCodex, []byte(`{"hook":{"hook_event_name":"SessionStart"},"env":{"HIVERYN_SESSION_ID":"caller-1"}}`))
+	event, err := receiver.Ingest(context.Background(), agentruntime.AgentCodex, []byte(`{"hook":{"hook_event_name":"SessionStart"},"env":{"AGENTRUNTIME_SESSION_ID":"caller-1"}}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -176,7 +176,7 @@ func TestReceiverIngestPublishesClaudeSession(t *testing.T) {
 func TestReceiverKeepsClaudeSubagentParentWhenSeenFirst(t *testing.T) {
 	receiver := NewReceiver(claude.New(claude.DefaultOptions()))
 
-	subagent, err := receiver.Ingest(context.Background(), agentruntime.AgentClaude, []byte(`{"hook":{"hook_event_name":"PreToolUse","session_id":"native-primary","agent_id":"native-sub","agent_type":"Explore","tool_name":"Read"},"env":{"HIVERYN_SESSION_ID":"caller-1"}}`))
+	subagent, err := receiver.Ingest(context.Background(), agentruntime.AgentClaude, []byte(`{"hook":{"hook_event_name":"PreToolUse","session_id":"native-primary","agent_id":"native-sub","agent_type":"Explore","tool_name":"Read"},"env":{"AGENTRUNTIME_SESSION_ID":"caller-1"}}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -187,7 +187,7 @@ func TestReceiverKeepsClaudeSubagentParentWhenSeenFirst(t *testing.T) {
 		t.Fatalf("subagent primary native ID: %q", subagent.PrimaryNativeID)
 	}
 
-	primary, err := receiver.Ingest(context.Background(), agentruntime.AgentClaude, []byte(`{"hook":{"hook_event_name":"SessionStart","session_id":"native-primary"},"env":{"HIVERYN_SESSION_ID":"caller-1"}}`))
+	primary, err := receiver.Ingest(context.Background(), agentruntime.AgentClaude, []byte(`{"hook":{"hook_event_name":"SessionStart","session_id":"native-primary"},"env":{"AGENTRUNTIME_SESSION_ID":"caller-1"}}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -202,11 +202,11 @@ func TestReceiverKeepsClaudeSubagentParentWhenSeenFirst(t *testing.T) {
 func TestReceiverSeparatesPrimaryNativeByAgent(t *testing.T) {
 	receiver := NewReceiver(codex.New(codex.DefaultOptions()), claude.New(claude.DefaultOptions()))
 
-	codexEvent, err := receiver.Ingest(context.Background(), agentruntime.AgentCodex, []byte(`{"hook":{"hook_event_name":"SessionStart","session_id":"codex-native"},"env":{"HIVERYN_SESSION_ID":"caller-1"}}`))
+	codexEvent, err := receiver.Ingest(context.Background(), agentruntime.AgentCodex, []byte(`{"hook":{"hook_event_name":"SessionStart","session_id":"codex-native"},"env":{"AGENTRUNTIME_SESSION_ID":"caller-1"}}`))
 	if err != nil {
 		t.Fatal(err)
 	}
-	claudeEvent, err := receiver.Ingest(context.Background(), agentruntime.AgentClaude, []byte(`{"hook":{"hook_event_name":"SessionStart","session_id":"claude-native"},"env":{"HIVERYN_SESSION_ID":"caller-1"}}`))
+	claudeEvent, err := receiver.Ingest(context.Background(), agentruntime.AgentClaude, []byte(`{"hook":{"hook_event_name":"SessionStart","session_id":"claude-native"},"env":{"AGENTRUNTIME_SESSION_ID":"caller-1"}}`))
 	if err != nil {
 		t.Fatal(err)
 	}

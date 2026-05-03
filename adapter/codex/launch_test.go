@@ -11,20 +11,16 @@ import (
 func TestPrepareLaunchInteractiveWithMCP(t *testing.T) {
 	adapter := New(DefaultOptions())
 	req := agentruntime.StartRequest{
-		ID:      "hiveryn-session-1",
+		ID:      "session-1",
 		Agent:   agentruntime.AgentCodex,
 		Workdir: "/tmp/work",
 		Prompt:  "Start architect session",
-		Metadata: map[string]string{
-			"session_kind":     "architect",
-			"architect_folder": "/tmp/architect",
-		},
-		MCPServers: []agentruntime.MCPServerConfig{ApplyMCPApprovalDefaults(agentruntime.MCPServerConfig{
-			Name:    "hiveryn",
-			Command: "hiveryn-mcp-proxy",
+		MCPServers: []agentruntime.MCPServerConfig{{
+			Name:    "my-server",
+			Command: "my-mcp-proxy",
 			Args:    []string{"--daemon", "http://127.0.0.1:4200"},
-			CWD:     "/tmp/architect",
-		})},
+			CWD:     "/tmp/work",
+		}},
 	}
 
 	spec, err := adapter.PrepareLaunch(context.Background(), req)
@@ -37,14 +33,8 @@ func TestPrepareLaunchInteractiveWithMCP(t *testing.T) {
 
 	joined := strings.Join(spec.Args, "\x00")
 	for _, want := range []string{
-		"--no-alt-screen",
-		"--enable\x00codex_hooks",
-		"--sandbox\x00read-only",
-		"--config\x00approval_policy=\"never\"",
-		"mcp_servers.hiveryn.command=\"hiveryn-mcp-proxy\"",
-		"mcp_servers.hiveryn.args=[\"--daemon\",\"http://127.0.0.1:4200\"]",
-		"mcp_servers.hiveryn.default_tools_approval_mode=\"approve\"",
-		"mcp_servers.hiveryn.approval_mode=\"approve\"",
+		"mcp_servers.my-server.command=\"my-mcp-proxy\"",
+		"mcp_servers.my-server.args=[\"--daemon\",\"http://127.0.0.1:4200\"]",
 		"--cd\x00/tmp/work",
 		"Start architect session",
 	} {
@@ -53,11 +43,8 @@ func TestPrepareLaunchInteractiveWithMCP(t *testing.T) {
 		}
 	}
 
-	if spec.Env["HIVERYN_SESSION_ID"] != "hiveryn-session-1" {
-		t.Fatalf("HIVERYN_SESSION_ID: %q", spec.Env["HIVERYN_SESSION_ID"])
-	}
-	if spec.Env["HIVERYN_SESSION_KIND"] != "architect" {
-		t.Fatalf("HIVERYN_SESSION_KIND: %q", spec.Env["HIVERYN_SESSION_KIND"])
+	if spec.Env["AGENTRUNTIME_SESSION_ID"] != "session-1" {
+		t.Fatalf("AGENTRUNTIME_SESSION_ID: %q", spec.Env["AGENTRUNTIME_SESSION_ID"])
 	}
 }
 
@@ -67,16 +54,12 @@ func TestPrepareLaunchHTTPMCP(t *testing.T) {
 		ID:      "worker-1",
 		Agent:   agentruntime.AgentCodex,
 		Workdir: "/repo",
-		MCPServers: []agentruntime.MCPServerConfig{ApplyMCPApprovalDefaults(agentruntime.MCPServerConfig{
-			Name:              "hiveryn",
+		MCPServers: []agentruntime.MCPServerConfig{{
+			Name:              "my-server",
 			URL:               "http://127.0.0.1:4200/mcp/worker-1",
-			BearerTokenEnvVar: "HIVERYN_MCP_TOKEN",
-		})},
-		Env: map[string]string{"HIVERYN_MCP_TOKEN": "secret"},
-		Metadata: map[string]string{
-			"session_kind": "worker",
-			"ticket_id":    "2026-05-01-0915-test",
-		},
+			BearerTokenEnvVar: "MY_MCP_TOKEN",
+		}},
+		Env: map[string]string{"MY_MCP_TOKEN": "secret"},
 	}
 
 	spec, err := adapter.PrepareLaunch(context.Background(), req)
@@ -86,15 +69,15 @@ func TestPrepareLaunchHTTPMCP(t *testing.T) {
 
 	joined := strings.Join(spec.Args, "\x00")
 	for _, want := range []string{
-		"mcp_servers.hiveryn.url=\"http://127.0.0.1:4200/mcp/worker-1\"",
-		"mcp_servers.hiveryn.bearer_token_env_var=\"HIVERYN_MCP_TOKEN\"",
+		"mcp_servers.my-server.url=\"http://127.0.0.1:4200/mcp/worker-1\"",
+		"mcp_servers.my-server.bearer_token_env_var=\"MY_MCP_TOKEN\"",
 	} {
 		if !strings.Contains(joined, want) {
 			t.Fatalf("args missing %q\nargs=%q", want, spec.Args)
 		}
 	}
 
-	if spec.Env["HIVERYN_TICKET_ID"] == "" || spec.Env["HIVERYN_MCP_TOKEN"] != "secret" {
+	if spec.Env["MY_MCP_TOKEN"] != "secret" {
 		t.Fatalf("env: %#v", spec.Env)
 	}
 }

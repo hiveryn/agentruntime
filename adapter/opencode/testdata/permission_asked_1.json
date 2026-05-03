@@ -2,12 +2,16 @@
   "hook_event_name": "permission.asked",
   "session_id": "ses_21873b6cbffeL3JOLPOFsrfKEt",
   "parent_session_id": "",
-  "hiveryn_session_id": "hiv-opencode-capture-1",
+  "agentruntime_session_id": "hiv-opencode-capture-1",
   "payload": {
-    "always": ["echo *"],
+    "always": [
+      "echo *"
+    ],
     "id": "per_de78c94640017BC1vidruNZc7B",
     "metadata": {},
-    "patterns": ["echo hiveryn-opencode-lab"],
+    "patterns": [
+      "echo hiveryn-opencode-lab"
+    ],
     "permission": "bash",
     "sessionID": "ses_21873b6cbffeL3JOLPOFsrfKEt",
     "tool": {

@@ -84,7 +84,7 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 	}
 	args = append(args, req.Args...)
 
-	env := buildEnv(req.Env, req.ID, string(configJSON), req.Metadata)
+	env := buildEnv(req.Env, req.ID, string(configJSON))
 
 	return agentruntime.LaunchSpec{
 		Command:      command,
@@ -159,21 +159,11 @@ func mapMCPServer(server agentruntime.MCPServerConfig) (ocMCPServer, error) {
 	return mapped, nil
 }
 
-func buildEnv(base map[string]string, id, configJSON string, metadata map[string]string) map[string]string {
-	extra := map[string]string{
-		"HIVERYN_SESSION_ID":      id,
+func buildEnv(base map[string]string, id, configJSON string) map[string]string {
+	return mergeEnv(base, map[string]string{
+		"AGENTRUNTIME_SESSION_ID": id,
 		"OPENCODE_CONFIG_CONTENT": configJSON,
-	}
-	if v := metadata["session_kind"]; v != "" {
-		extra["HIVERYN_SESSION_KIND"] = v
-	}
-	if v := metadata["architect_folder"]; v != "" {
-		extra["HIVERYN_ARCHITECT_FOLDER"] = v
-	}
-	if v := metadata["ticket_id"]; v != "" {
-		extra["HIVERYN_TICKET_ID"] = v
-	}
-	return mergeEnv(base, extra)
+	})
 }
 
 func mergeEnv(left, right map[string]string) map[string]string {

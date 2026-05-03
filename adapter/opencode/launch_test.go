@@ -38,8 +38,8 @@ func TestPrepareLaunch_Basic(t *testing.T) {
 	if spec.Workdir != "/tmp/work" {
 		t.Errorf("workdir: got %q", spec.Workdir)
 	}
-	if spec.Env["HIVERYN_SESSION_ID"] != "session-1" {
-		t.Errorf("HIVERYN_SESSION_ID: got %q", spec.Env["HIVERYN_SESSION_ID"])
+	if spec.Env["AGENTRUNTIME_SESSION_ID"] != "session-1" {
+		t.Errorf("AGENTRUNTIME_SESSION_ID: got %q", spec.Env["AGENTRUNTIME_SESSION_ID"])
 	}
 	if spec.Env["OPENCODE_CONFIG_CONTENT"] == "" {
 		t.Error("OPENCODE_CONFIG_CONTENT not set")
@@ -177,29 +177,6 @@ func TestPrepareLaunch_WithMCPHTTP(t *testing.T) {
 	}
 	if !strings.Contains(srv.Headers["Authorization"], "MCP_TOKEN") {
 		t.Errorf("Authorization header: got %q", srv.Headers["Authorization"])
-	}
-}
-
-func TestPrepareLaunch_MetadataEnv(t *testing.T) {
-	a := New(DefaultOptions())
-	req := baseReq()
-	req.Metadata = map[string]string{
-		"session_kind":     "worker",
-		"architect_folder": "/arch",
-		"ticket_id":        "tkt-42",
-	}
-	spec, err := a.PrepareLaunch(context.Background(), req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if spec.Env["HIVERYN_SESSION_KIND"] != "worker" {
-		t.Errorf("HIVERYN_SESSION_KIND: got %q", spec.Env["HIVERYN_SESSION_KIND"])
-	}
-	if spec.Env["HIVERYN_ARCHITECT_FOLDER"] != "/arch" {
-		t.Errorf("HIVERYN_ARCHITECT_FOLDER: got %q", spec.Env["HIVERYN_ARCHITECT_FOLDER"])
-	}
-	if spec.Env["HIVERYN_TICKET_ID"] != "tkt-42" {
-		t.Errorf("HIVERYN_TICKET_ID: got %q", spec.Env["HIVERYN_TICKET_ID"])
 	}
 }
 

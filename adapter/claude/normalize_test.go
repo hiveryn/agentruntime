@@ -101,7 +101,7 @@ func TestCapturedClaudeSequence(t *testing.T) {
 
 func TestNormalizePermissionRequestMapsToAwaitingInput(t *testing.T) {
 	adapter := New(DefaultOptions())
-	data := []byte(`{"hook":{"hook_event_name":"PermissionRequest","session_id":"native-123","tool_name":"apply_patch"},"env":{"HIVERYN_SESSION_ID":"hiv-123"}}`)
+	data := []byte(`{"hook":{"hook_event_name":"PermissionRequest","session_id":"native-123","tool_name":"apply_patch"},"env":{"AGENTRUNTIME_SESSION_ID":"hiv-123"}}`)
 
 	event, err := adapter.NormalizeEvent(context.Background(), data)
 	if err != nil {
@@ -114,7 +114,7 @@ func TestNormalizePermissionRequestMapsToAwaitingInput(t *testing.T) {
 
 func TestNormalizeStopFailureMapsToError(t *testing.T) {
 	adapter := New(DefaultOptions())
-	data := []byte(`{"hook":{"hook_event_name":"StopFailure","session_id":"native-123","error":"rate_limit"},"env":{"HIVERYN_SESSION_ID":"hiv-123"}}`)
+	data := []byte(`{"hook":{"hook_event_name":"StopFailure","session_id":"native-123","error":"rate_limit"},"env":{"AGENTRUNTIME_SESSION_ID":"hiv-123"}}`)
 
 	event, err := adapter.NormalizeEvent(context.Background(), data)
 	if err != nil {
@@ -140,7 +140,7 @@ func TestNormalizeDropsInstructionsLoaded(t *testing.T) {
 
 func TestNormalizeAcceptsCapturedWrapper(t *testing.T) {
 	adapter := New(DefaultOptions())
-	data := []byte(`{"payload":{"agent":"claude","env":{"HIVERYN_SESSION_ID":"hiv-123"},"hook":{"hook_event_name":"SessionStart","session_id":"native-123","source":"startup"},"received_at":"2026-05-01T13:31:16.146505+00:00"}}`)
+	data := []byte(`{"payload":{"agent":"claude","env":{"AGENTRUNTIME_SESSION_ID":"hiv-123"},"hook":{"hook_event_name":"SessionStart","session_id":"native-123","source":"startup"},"received_at":"2026-05-01T13:31:16.146505+00:00"}}`)
 
 	event, err := adapter.NormalizeEvent(context.Background(), data)
 	if err != nil {

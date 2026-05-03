@@ -213,7 +213,7 @@ func TestNormalize_RawPreserved(t *testing.T) {
 	if ev.Raw == nil {
 		t.Fatal("Raw is nil")
 	}
-	for _, key := range []string{"hook_event_name", "session_id", "parent_session_id", "hiveryn_session_id", "payload"} {
+	for _, key := range []string{"hook_event_name", "session_id", "parent_session_id", "agentruntime_session_id", "payload"} {
 		if _, ok := ev.Raw[key]; !ok {
 			t.Errorf("Raw missing key %q", key)
 		}
@@ -222,12 +222,12 @@ func TestNormalize_RawPreserved(t *testing.T) {
 
 func TestNormalize_FallbackID(t *testing.T) {
 	a := New(DefaultOptions())
-	// session with no hiveryn_session_id — should fall back to session_id
+	// session with no agentruntime_session_id — should fall back to session_id
 	data := []byte(`{
 		"hook_event_name": "session.created",
 		"session_id": "ses_native123",
 		"parent_session_id": "",
-		"hiveryn_session_id": "",
+		"agentruntime_session_id": "",
 		"payload": {"sessionID": "ses_native123"}
 	}`)
 	ev, err := a.NormalizeEvent(context.Background(), data)
@@ -245,7 +245,7 @@ func TestNormalize_QuestionTool_AwaitingInput(t *testing.T) {
 		"hook_event_name": "tool.execute.before",
 		"session_id": "ses_abc",
 		"parent_session_id": "",
-		"hiveryn_session_id": "hiv-test-1",
+		"agentruntime_session_id": "hiv-test-1",
 		"payload": {"tool": "question", "callID": "call_xyz"}
 	}`)
 	ev, err := a.NormalizeEvent(context.Background(), data)
@@ -269,7 +269,7 @@ func TestNormalize_QuestionTool_After_Working(t *testing.T) {
 		"hook_event_name": "tool.execute.after",
 		"session_id": "ses_abc",
 		"parent_session_id": "",
-		"hiveryn_session_id": "hiv-test-1",
+		"agentruntime_session_id": "hiv-test-1",
 		"payload": {"tool": "question", "callID": "call_xyz"}
 	}`)
 	ev, err := a.NormalizeEvent(context.Background(), data)

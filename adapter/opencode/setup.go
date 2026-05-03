@@ -31,7 +31,7 @@ export default {
             hook_event_name: event.type,
             session_id: sessionID,
             parent_session_id: parentSessionID,
-            hiveryn_session_id: process.env?.HIVERYN_SESSION_ID ?? "",
+            agentruntime_session_id: process.env?.AGENTRUNTIME_SESSION_ID ?? "",
             payload: props,
           }),
         })
@@ -46,7 +46,7 @@ export default {
             hook_event_name: "tool.execute.before",
             session_id: inp.sessionID,
             parent_session_id: "",
-            hiveryn_session_id: process.env?.HIVERYN_SESSION_ID ?? "",
+            agentruntime_session_id: process.env?.AGENTRUNTIME_SESSION_ID ?? "",
             payload: { tool: inp.tool, callID: inp.callID },
           }),
         })
@@ -61,7 +61,7 @@ export default {
             hook_event_name: "tool.execute.after",
             session_id: inp.sessionID,
             parent_session_id: "",
-            hiveryn_session_id: process.env?.HIVERYN_SESSION_ID ?? "",
+            agentruntime_session_id: process.env?.AGENTRUNTIME_SESSION_ID ?? "",
             payload: { tool: inp.tool, callID: inp.callID },
           }),
         })

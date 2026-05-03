@@ -2,8 +2,7 @@
   "agent": "claude",
   "args": [],
   "env": {
-    "HIVERYN_SESSION_ID": "hiv-claude-lab-1",
-    "HIVERYN_SESSION_KIND": "worker"
+    "AGENTRUNTIME_SESSION_ID": "hiv-claude-lab-1"
   },
   "hook": {
     "agent_id": "a1bcb29f5d4b9670b",

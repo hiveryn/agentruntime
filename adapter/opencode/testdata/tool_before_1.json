@@ -2,7 +2,7 @@
   "hook_event_name": "tool.execute.before",
   "session_id": "ses_21873b6cbffeL3JOLPOFsrfKEt",
   "parent_session_id": "",
-  "hiveryn_session_id": "hiv-opencode-capture-1",
+  "agentruntime_session_id": "hiv-opencode-capture-1",
   "payload": {
     "callID": "call_KuqKK0jB1dYNkfUE6SmMHOwO",
     "tool": "bash"

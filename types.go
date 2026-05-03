@@ -39,7 +39,6 @@ type StartRequest struct {
 	Prompt       string
 	Instructions string
 	MCPServers   []MCPServerConfig
-	Metadata     map[string]string
 }
 
 type Session struct {
@@ -71,15 +70,13 @@ type LaunchSpec struct {
 }
 
 type MCPServerConfig struct {
-	Name                     string
-	Command                  string
-	Args                     []string
-	CWD                      string
-	Env                      map[string]string
-	URL                      string
-	BearerTokenEnvVar        string
-	DefaultToolsApprovalMode string
-	ApprovalMode             string
+	Name              string
+	Command           string
+	Args              []string
+	CWD               string
+	Env               map[string]string
+	URL               string
+	BearerTokenEnvVar string
 }
 
 type HookCommand struct {

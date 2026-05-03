@@ -82,7 +82,7 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 	args = append(args, req.Args...)
 
 	env := mergeEnv(req.Env, map[string]string{
-		"HIVERYN_SESSION_ID": req.ID,
+		"AGENTRUNTIME_SESSION_ID": req.ID,
 	})
 
 	return agentruntime.LaunchSpec{

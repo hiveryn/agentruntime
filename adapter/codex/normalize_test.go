@@ -100,7 +100,7 @@ func TestNormalizeDropsUnknownEvent(t *testing.T) {
 
 func TestPermissionRequestMapsToWorking(t *testing.T) {
 	adapter := New(DefaultOptions())
-	data := []byte(`{"hook":{"hook_event_name":"PermissionRequest","session_id":"native-123","tool_name":"apply_patch"},"env":{"HIVERYN_SESSION_ID":"hiv-123"}}`)
+	data := []byte(`{"hook":{"hook_event_name":"PermissionRequest","session_id":"native-123","tool_name":"apply_patch"},"env":{"AGENTRUNTIME_SESSION_ID":"hiv-123"}}`)
 
 	event, err := adapter.NormalizeEvent(context.Background(), data)
 	if err != nil {
@@ -113,7 +113,7 @@ func TestPermissionRequestMapsToWorking(t *testing.T) {
 
 func TestNormalizePreservesEnvelopeForDiagnostics(t *testing.T) {
 	adapter := New(DefaultOptions())
-	data := []byte(`{"received_at":"2026-05-01T08:46:58.178726Z","hook":{"hook_event_name":"SessionStart","session_id":"native-123"},"env":{"HIVERYN_SESSION_ID":"hiv-123"},"hook_cwd":"/tmp/work","args":["hook"]}`)
+	data := []byte(`{"received_at":"2026-05-01T08:46:58.178726Z","hook":{"hook_event_name":"SessionStart","session_id":"native-123"},"env":{"AGENTRUNTIME_SESSION_ID":"hiv-123"},"hook_cwd":"/tmp/work","args":["hook"]}`)
 
 	event, err := adapter.NormalizeEvent(context.Background(), data)
 	if err != nil {
@@ -129,7 +129,7 @@ func TestNormalizePreservesEnvelopeForDiagnostics(t *testing.T) {
 		t.Fatalf("hook_cwd: %#v", got)
 	}
 	env, _ := event.Raw["env"].(map[string]string)
-	if env == nil || env["HIVERYN_SESSION_ID"] != "hiv-123" {
+	if env == nil || env["AGENTRUNTIME_SESSION_ID"] != "hiv-123" {
 		t.Fatalf("env: %#v", event.Raw["env"])
 	}
 	args, _ := event.Raw["args"].([]string)
