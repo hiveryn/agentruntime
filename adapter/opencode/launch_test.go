@@ -645,6 +645,180 @@ func TestPrepareLaunch_MCPNameValidation(t *testing.T) {
 	}
 }
 
+func TestPrepareLaunch_WithAgentConfig(t *testing.T) {
+	a := New(DefaultOptions())
+	req := baseReq()
+	req.OpenCodeAgentConfig = map[string]agentruntime.OpenCodeAgentConfig{
+		"cortex": {
+			Description: "Cortex agent",
+			Mode:        "auto",
+			Prompt:      "You are Cortex.",
+			Permission:  map[string]string{"bash": "allow"},
+		},
+	}
+	spec, err := a.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var cfg ocConfig
+	if err := json.Unmarshal([]byte(spec.Env["OPENCODE_CONFIG_CONTENT"]), &cfg); err != nil {
+		t.Fatalf("parse OPENCODE_CONFIG_CONTENT: %v", err)
+	}
+	entry, ok := cfg.Agent["cortex"]
+	if !ok {
+		t.Fatal("agent entry cortex not found")
+	}
+	if entry.Description != "Cortex agent" {
+		t.Errorf("description: got %q", entry.Description)
+	}
+	if entry.Mode != "auto" {
+		t.Errorf("mode: got %q", entry.Mode)
+	}
+	if entry.Prompt != "You are Cortex." {
+		t.Errorf("prompt: got %q", entry.Prompt)
+	}
+	if entry.Permission["bash"] != "allow" {
+		t.Errorf("permission bash: got %q", entry.Permission["bash"])
+	}
+}
+
+func TestPrepareLaunch_NilAgentConfig(t *testing.T) {
+	a := New(DefaultOptions())
+	req := baseReq()
+	// OpenCodeAgentConfig not set — agent key must be absent from config JSON.
+	spec, err := a.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var cfg ocConfig
+	if err := json.Unmarshal([]byte(spec.Env["OPENCODE_CONFIG_CONTENT"]), &cfg); err != nil {
+		t.Fatalf("parse OPENCODE_CONFIG_CONTENT: %v", err)
+	}
+	if cfg.Agent != nil {
+		t.Errorf("expected no agent section for nil OpenCodeAgentConfig, got: %#v", cfg.Agent)
+	}
+}
+
+func TestPrepareLaunch_EmptyAgentConfig(t *testing.T) {
+	a := New(DefaultOptions())
+	req := baseReq()
+	req.OpenCodeAgentConfig = map[string]agentruntime.OpenCodeAgentConfig{}
+	spec, err := a.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var cfg ocConfig
+	if err := json.Unmarshal([]byte(spec.Env["OPENCODE_CONFIG_CONTENT"]), &cfg); err != nil {
+		t.Fatalf("parse OPENCODE_CONFIG_CONTENT: %v", err)
+	}
+	if cfg.Agent != nil {
+		t.Errorf("expected no agent section for empty OpenCodeAgentConfig, got: %#v", cfg.Agent)
+	}
+}
+
+func TestPrepareLaunch_AgentConfigCoexistsWithMCPInstructionsProfile(t *testing.T) {
+	a := New(DefaultOptions())
+	req := baseReq()
+	req.OpenCodeProfile = "cortex"
+	req.Instructions = "Be concise."
+	req.MCPServers = []agentruntime.MCPServerConfig{{
+		Name:    "tools",
+		Command: "my-mcp",
+	}}
+	req.OpenCodeAgentConfig = map[string]agentruntime.OpenCodeAgentConfig{
+		"cortex": {
+			Description: "Cortex",
+			Mode:        "auto",
+		},
+	}
+	spec, err := a.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		for _, p := range spec.CleanupPaths {
+			_ = os.Remove(p)
+		}
+	}()
+
+	if !hasArgPair(spec.Args, "--agent", "cortex") {
+		t.Errorf("--agent cortex missing: %v", spec.Args)
+	}
+
+	var cfg ocConfig
+	if err := json.Unmarshal([]byte(spec.Env["OPENCODE_CONFIG_CONTENT"]), &cfg); err != nil {
+		t.Fatalf("parse OPENCODE_CONFIG_CONTENT: %v", err)
+	}
+	if _, ok := cfg.MCP["tools"]; !ok {
+		t.Error("mcp entry tools missing")
+	}
+	if len(cfg.Instructions) == 0 {
+		t.Error("instructions missing")
+	}
+	if _, ok := cfg.Agent["cortex"]; !ok {
+		t.Error("agent entry cortex missing")
+	}
+}
+
+func TestPrepareLaunch_AgentConfigPromptIndependentFromRequestPrompt(t *testing.T) {
+	a := New(DefaultOptions())
+	req := baseReq()
+	req.Prompt = "kickoff prompt"
+	req.OpenCodeAgentConfig = map[string]agentruntime.OpenCodeAgentConfig{
+		"cortex": {
+			Description: "Cortex",
+			Mode:        "auto",
+			Prompt:      "agent definition prompt",
+		},
+	}
+	spec, err := a.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// StartRequest.Prompt becomes --prompt arg
+	if !hasArgPair(spec.Args, "--prompt", "kickoff prompt") {
+		t.Errorf("--prompt kickoff not found: %v", spec.Args)
+	}
+
+	// OpenCodeAgentConfig.Prompt goes into config agent section, not args
+	var cfg ocConfig
+	if err := json.Unmarshal([]byte(spec.Env["OPENCODE_CONFIG_CONTENT"]), &cfg); err != nil {
+		t.Fatalf("parse OPENCODE_CONFIG_CONTENT: %v", err)
+	}
+	entry := cfg.Agent["cortex"]
+	if entry.Prompt != "agent definition prompt" {
+		t.Errorf("agent definition prompt: got %q", entry.Prompt)
+	}
+}
+
+func TestPrepareLaunch_AgentConfigNoPrompt(t *testing.T) {
+	a := New(DefaultOptions())
+	req := baseReq()
+	req.OpenCodeAgentConfig = map[string]agentruntime.OpenCodeAgentConfig{
+		"minimal": {
+			Description: "Minimal",
+			Mode:        "auto",
+		},
+	}
+	spec, err := a.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var cfg ocConfig
+	if err := json.Unmarshal([]byte(spec.Env["OPENCODE_CONFIG_CONTENT"]), &cfg); err != nil {
+		t.Fatalf("parse OPENCODE_CONFIG_CONTENT: %v", err)
+	}
+	entry := cfg.Agent["minimal"]
+	if entry.Prompt != "" {
+		t.Errorf("expected empty prompt, got %q", entry.Prompt)
+	}
+}
+
 func TestPrepareLaunch_ArgOrdering(t *testing.T) {
 	a := New(DefaultOptions())
 	req := baseReq()

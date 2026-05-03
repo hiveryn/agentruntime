@@ -30,18 +30,28 @@ const (
 )
 
 type StartRequest struct {
-	ID              string
-	Agent           AgentKind
-	Command         string
-	Args            []string
-	Env             map[string]string
-	Workdir         string
-	Prompt          string
-	Instructions    string
-	MCPServers      []MCPServerConfig
-	OpenCodeProfile string // OpenCode --agent profile name; leave empty for OpenCode default
-	Resume          bool   // Resume an existing session instead of starting a new one
-	ResumeID        string // Native session ID to resume; if empty, resumes the most recent session
+	ID                  string
+	Agent               AgentKind
+	Command             string
+	Args                []string
+	Env                 map[string]string
+	Workdir             string
+	Prompt              string
+	Instructions        string
+	MCPServers          []MCPServerConfig
+	OpenCodeProfile     string                      // OpenCode --agent profile name; leave empty for OpenCode default
+	OpenCodeAgentConfig map[string]OpenCodeAgentConfig // OpenCode agent profile definitions merged into OPENCODE_CONFIG_CONTENT
+	Resume              bool                        // Resume an existing session instead of starting a new one
+	ResumeID            string                      // Native session ID to resume; if empty, resumes the most recent session
+}
+
+// OpenCodeAgentConfig defines an OpenCode agent profile entry for the config agent section.
+// Prompt here is the agent definition prompt, independent of StartRequest.Prompt (kickoff) and StartRequest.Instructions (additive).
+type OpenCodeAgentConfig struct {
+	Description string            `json:"description"`
+	Mode        string            `json:"mode"`
+	Prompt      string            `json:"prompt,omitempty"`
+	Permission  map[string]string `json:"permission"`
 }
 
 type Event struct {

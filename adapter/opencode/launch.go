@@ -11,8 +11,16 @@ import (
 )
 
 type ocConfig struct {
-	MCP          map[string]ocMCPServer `json:"mcp,omitempty"`
-	Instructions []string               `json:"instructions,omitempty"`
+	MCP          map[string]ocMCPServer  `json:"mcp,omitempty"`
+	Instructions []string                `json:"instructions,omitempty"`
+	Agent        map[string]ocAgentEntry `json:"agent,omitempty"`
+}
+
+type ocAgentEntry struct {
+	Description string            `json:"description"`
+	Mode        string            `json:"mode"`
+	Prompt      string            `json:"prompt,omitempty"`
+	Permission  map[string]string `json:"permission"`
 }
 
 type ocMCPServer struct {
@@ -74,6 +82,18 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 				return agentruntime.LaunchSpec{}, err
 			}
 			cfg.MCP[server.Name] = mapped
+		}
+	}
+
+	if len(req.OpenCodeAgentConfig) > 0 {
+		cfg.Agent = make(map[string]ocAgentEntry, len(req.OpenCodeAgentConfig))
+		for name, ac := range req.OpenCodeAgentConfig {
+			cfg.Agent[name] = ocAgentEntry{
+				Description: ac.Description,
+				Mode:        ac.Mode,
+				Prompt:      ac.Prompt,
+				Permission:  ac.Permission,
+			}
 		}
 	}
 
