@@ -1,132 +1,187 @@
 # agentruntime
 
-Reusable Go primitives for setting up agent CLI hooks/plugins, preparing agent
-process launch specs, and normalizing the hook events those agents emit.
+Reusable Go module for agent CLI launch/config primitives and hook-event
+normalization.
 
-Current first-class adapters: `codex`, `claude`, and `opencode`.
+Current first-class adapters: `codex`, `claude`, `opencode`.
 
 ## Status
 
-`v0.x.y` - pre-v1. APIs may change while the module is being exercised by
-downstream integrations.
+`v0.x.y` — pre-v1. APIs may change while the module is exercised by downstream
+integrations.
 
-## What This Library Does
+## Overview
 
-Use `agentruntime` when you want a library to answer two startup questions for
-supported agent CLIs:
+`agentruntime` answers two questions for supported agent CLIs:
 
-- What persistent hook/plugin setup is required so this agent reports events?
-- What command, args, env, workdir, and temp files are required to start this
-  agent session?
+- What hook/plugin setup does this agent need to report runtime events?
+- What command, args, env, workdir, and temp files does this agent session need
+  to launch?
 
 The library returns specs. It does not run or supervise processes.
 
-## Boundary
+### Boundary
 
-`agentruntime` owns:
-
-- Marker-scoped hook/plugin setup and removal.
-- Launch specs for supported agent CLIs.
-- Native hook/plugin event normalization.
-- In-process ingest helpers and an optional local HTTP handler.
+`agentruntime` owns marker-scoped hook/plugin setup and removal, launch specs,
+native event normalization, and in-process ingest helpers (including an optional
+local HTTP handler).
 
 Callers own process execution and lifecycle, PTYs or terminal rendering,
 persistence, auth, product workflow, and any UI event stream.
 
-## Setup And Launch
+## Quick Start
 
 1. Create an adapter from `adapter/codex`, `adapter/claude`, or
    `adapter/opencode`.
-2. Call `EnsureSetup` with a stable `SetupRequest.Marker` and hook target.
+2. Call `EnsureSetup` with a persistent `SetupRequest.Marker` and hook target.
 3. Call `PrepareLaunch` with a `StartRequest`.
-4. Execute the returned `LaunchSpec` with your own process or PTY manager.
-5. Remove every path in `LaunchSpec.CleanupPaths` after that process exits.
+4. Execute `LaunchSpec` with your own process or PTY manager: merge
+   `LaunchSpec.Env`, run `LaunchSpec.Command` with `LaunchSpec.Args` as a direct
+   `argv` array (lossless, never shell-join), and set the working directory to
+   `LaunchSpec.Workdir`.
+5. Remove every path in `LaunchSpec.CleanupPaths` after the process exits.
 
-`EnsureSetup` is persistent setup and is safe to call on startup. It is
-idempotent for the same marker and hook target. It writes:
+## Setup Details
+
+`EnsureSetup` is idempotent for the same marker and hook target. It writes
+marker-scoped files:
 
 - Codex: `~/.codex/hooks.json`
 - Claude Code: `~/.claude/settings.json`
 - OpenCode: `~/.config/opencode/plugins/agentruntime-<marker>.ts`
 
-Codex and Claude Code setup use `codex.HookCommand(endpoint)` /
-`claude.HookCommand(endpoint)` to generate canonical hook commands that post
-enveloped native hook JSON to your receiver. OpenCode setup uses
-`HookCommand.Endpoint`; the generated plugin POSTs to `<endpoint>/opencode`.
-
 Call `RemoveSetup` when your integration is disabled, uninstalled, or changing
-markers. It removes the persistent marker-scoped hook/plugin setup. It is not
-part of normal per-launch cleanup.
+markers. This is distinct from per-launch cleanup.
 
 `LaunchSpec.CleanupPaths` is per-launch cleanup. Adapters use it for temporary
-files created by `PrepareLaunch`, such as Claude Code MCP config files or
-OpenCode instruction files.
+files created by `PrepareLaunch` (Claude MCP config files, OpenCode instruction
+files).
 
-## Launch Inputs
+### Hook Commands
 
-`StartRequest` is intentionally small:
+Codex and Claude Code use self-contained Node.js hook commands that POST
+enveloped native hook JSON to your receiver:
 
-- `ID`: caller-owned session/correlation key. Normalized events use this as
-  `Event.ID`.
-- `Agent`: optional adapter guard, for example `agentruntime.AgentCodex`.
-- `Command`: executable override. If empty, the adapter uses its default CLI
+```go
+codex.HookCommand("http://127.0.0.1:9000")   // POSTs to /codex
+claude.HookCommand("http://127.0.0.1:9000")  // POSTs to /claude
+```
+
+OpenCode writes a TypeScript plugin that POSTs to `<endpoint>/opencode` from
+within the runtime process. Use `HookCommand.Endpoint`:
+
+```go
+agentruntime.HookCommand{Endpoint: "http://127.0.0.1:9000"}
+```
+
+## StartRequest Reference
+
+- **`ID`** — caller-owned stable session/correlation ID.
+- **`Agent`** — optional adapter guard (`AgentCodex`, `AgentClaude`,
+  `AgentOpenCode`).
+- **`Command`** — executable override. If empty, the adapter uses its default CLI
   name.
-- `Args`: ordinary runtime CLI arguments to append after synthesized arguments.
-- `Env`: optional additional environment for the launched process.
-- `Workdir`: required working directory.
-- `Prompt`: initial prompt when the runtime supports it.
-- `Instructions`: runtime-specific instruction/system-prompt input.
-- `MCPServers`: stdio or HTTP MCP servers the adapter must synthesize into the
-  runtime's supported config shape.
-- `OpenCodeProfile`: OpenCode only. Selects the OpenCode agent profile
-  (`--agent <profile>`). Leave empty to use the OpenCode default.
-- `Resume`: when true, request the adapter to resume an existing session instead
-  of starting a fresh one. Each adapter synthesizes resume in its own native
-  shape: Claude emits `--resume [ResumeID]` and skips generating a new
-  `--session-id`; Codex uses the `resume` subcommand (`codex resume --last` or
-  `codex resume <ResumeID>`); OpenCode emits `--continue` or `--session
-  <ResumeID>`.
-- `ResumeID`: native session ID to resume when `Resume` is true. If empty, each
-  adapter resumes the most recently used session (Claude bare `--resume`, Codex
-  `--last`, OpenCode `--continue`). `AGENTRUNTIME_SESSION_ID` is always set to
-  `StartRequest.ID` for caller-owned correlation regardless of resume mode.
-  Prompt suppression applies in two cases: Codex bare resume (`ResumeID` empty)
-  suppresses `Prompt` because `codex resume --last` treats the next positional
-  as `SESSION_ID` not `PROMPT`; OpenCode specific resume (`ResumeID` non-empty)
-  suppresses `Prompt` because OpenCode does not accept `--prompt` alongside
-  `--session <id>`.
+- **`Args`** — additional CLI arguments appended after synthesized arguments.
+- **`Env`** — optional extra environment for the launched process.
+- **`Workdir`** — required working directory.
+- **`Prompt`** — initial prompt when the runtime supports it.
+- **`Instructions`** — runtime-specific instruction/system-prompt input.
+- **`MCPServers`** — stdio or HTTP MCP servers synthesized into the runtime's
+  config shape.
+- **`OpenCodeProfile`** — (OpenCode only) selects `--agent <profile>`. Leave
+  empty for OpenCode default.
+- **`Resume`** — when `true`, resume an existing session instead of starting
+  fresh.
+- **`ResumeID`** — native session ID to resume when `Resume` is `true`. If empty,
+  resumes the most recent session.
 
 Ordinary runtime options should be passed through `Command`, `Args`, and `Env`.
-The library only models behavior it must synthesize for portability, such as
-MCP config, instruction injection, session correlation, and hook/plugin setup.
+The library only models behavior it must synthesize for portability: MCP config,
+instruction injection, session correlation, and hook/plugin setup.
 
-Some keys and arguments are adapter-managed. `AGENTRUNTIME_SESSION_ID` is
-generated into `LaunchSpec.Env` for all adapters and must not conflict with
-`StartRequest.ID`. OpenCode also manages `OPENCODE_CONFIG_CONTENT`.
-Adapter-managed CLI arguments are rejected when passed through `Args`: Claude
-Code manages `--session-id` and `--resume`; OpenCode manages `--prompt`,
-`--agent`, `--continue`, `-c`, `--session`, and `-s`.
+## Consumer Contract
 
-When you execute a `LaunchSpec`, include `LaunchSpec.Env` in the child process
-environment. It contains generated correlation/config values even when
-`StartRequest.Env` is empty.
+These rules define the migration surface for downstream consumers. The library
+guarantees this contract at the `v0` line.
+
+### Session Identity
+
+- `StartRequest.ID` is the caller-owned stable session/correlation ID.
+- `LaunchSpec.Env["AGENTRUNTIME_SESSION_ID"]` carries that same ID into the
+  launched process.
+- `Event.ID` (matching `StartRequest.ID`) is the primary cache and subscription
+  key for consumers. Subscribe, deduplicate, and index on `Event.ID`.
+- `Event.NativeID`, `Event.PrimaryNativeID`, and `Event.NativeSessionRole` are
+  diagnostic and subsession metadata — do not use them as the primary consumer
+  session key.
+
+### Launch Execution
+
+When executing a `LaunchSpec`, callers must:
+
+- Merge `LaunchSpec.Env` into the child process environment.
+- Run `LaunchSpec.Command` with `LaunchSpec.Args` as a direct `argv` array
+  (lossless, never shell-join).
+- Set the working directory to `LaunchSpec.Workdir`.
+- Remove every path in `LaunchSpec.CleanupPaths` after the process exits.
+- Not mutate adapter-managed environment keys or CLI arguments.
+
+### Adapter-Managed Environment
+
+| Key                       | Adapters                | Notes                                          |
+|---------------------------|-------------------------|------------------------------------------------|
+| `AGENTRUNTIME_SESSION_ID` | Claude, Codex, OpenCode | Set to `StartRequest.ID`; rejected if conflicting |
+| `OPENCODE_CONFIG_CONTENT` | OpenCode                | Rejected if non-empty in `StartRequest.Env`     |
+
+### Adapter-Managed Arguments
+
+These CLI arguments are synthesized by the adapter and rejected when passed
+through `StartRequest.Args`:
+
+| Adapter  | Managed Args                                                                     |
+|----------|----------------------------------------------------------------------------------|
+| Claude   | `--append-system-prompt`, `--system-prompt`, `--mcp-config`, `--session-id`, `--resume` |
+| Codex    | (none — top-level args pass through; `resume` is a subcommand)                   |
+| OpenCode | `--prompt`, `--agent`, `--continue`, `-c`, `--session`, `-s`                     |
+
+### Resume Behavior
+
+Each adapter synthesizes resume in its own native shape:
+
+| Adapter  | Bare resume (`ResumeID=""`) | Specific resume (`ResumeID=<id>`) | Prompt suppressed when |
+|----------|-----------------------------|-----------------------------------|------------------------|
+| Claude   | `--resume`                  | `--resume <id>`                   | never                  |
+| Codex    | `resume --last`             | `resume <id>`                     | bare resume only       |
+| OpenCode | `--continue`                | `--session <id>`                  | specific resume only   |
+
+In resume mode, Claude skips generating a new `--session-id`.
+`AGENTRUNTIME_SESSION_ID` is always set to `StartRequest.ID` regardless of
+resume mode.
 
 ## Event Ingest
 
-Adapters normalize native payloads into `Event`. `Event.ID` is caller-owned;
-`Event.NativeID` is the runtime-native session ID. `ingest.Receiver` tracks the
-first native session seen for each caller ID as `PrimaryNativeID` and classifies
-events as `primary` or `subsession` when possible.
+Adapters normalize native payloads into `Event`. `Event.ID` is the primary
+subscription and cache key (see [Consumer Contract](#consumer-contract) for
+identity rules).
 
-`Event.Status` is scoped to the native session that emitted the event. For
-example, Codex `Stop` and OpenCode `session.idle` mean that turn is idle; they
-do not mean the process exited.
+`ingest.Receiver` tracks the first native session seen for each `Event.ID` and
+exposes it as `Event.PrimaryNativeID`. It classifies events as `primary` or
+`subsession` via `Event.NativeSessionRole`. Use these fields to avoid treating
+subagent `Stop`/`idle` events as caller-session idle — not as primary keys.
 
-Use `Receiver.Handler(agent)` for the convenience HTTP path, or call
-`Receiver.Ingest(ctx, agent, data)` with raw hook bytes. Subscribe to normalized
-events through `receiver.Hub().Subscribe(ingest.Filter{...})`. If you already
-have your own ingest pipeline, call `adapter.NormalizeEvent(ctx, data)`
-directly.
+`Event.Status` is scoped to the native session that emitted the event. Codex
+`Stop` and OpenCode `session.idle` mean the turn is idle, not that the process
+exited.
+
+### Ingestion Paths
+
+- **Convenience HTTP** — `receiver.Handler(agent)` accepts native hook JSON.
+- **Direct ingest** — `receiver.Ingest(ctx, agent, data)` processes raw hook
+  bytes through normalization and classification.
+- **Standalone** — `adapter.NormalizeEvent(ctx, data)` normalizes without the
+  receiver.
+- **Subscription** — `receiver.Hub().Subscribe(ingest.Filter{ID: "session-1"})`
+  returns a channel of normalized events.
 
 ## Examples
 
@@ -184,8 +239,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	_ = spec // Run spec.Command, spec.Args, spec.Env, and spec.Workdir.
-	// Remove spec.CleanupPaths after the agent process exits.
+	_ = spec // Execute spec following the Consumer Contract.
 }
 ```
 
@@ -248,8 +302,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	_ = spec // Run spec.Command, spec.Args, spec.Env, and spec.Workdir.
-	// Remove spec.CleanupPaths after the agent process exits.
+	_ = spec // Execute spec following the Consumer Contract.
 }
 ```
 
@@ -314,7 +367,10 @@ func main() {
 		log.Fatal(err)
 	}
 
-	_ = spec // Run spec.Command, spec.Args, spec.Env, and spec.Workdir.
-	// Remove spec.CleanupPaths after the agent process exits.
+	_ = spec // Execute spec following the Consumer Contract.
 }
 ```
+
+## Current Consumers
+
+- [Cortex](https://github.com/kareemaly/cortex)
