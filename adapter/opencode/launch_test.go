@@ -282,3 +282,80 @@ func TestPrepareLaunch_WrongAgent(t *testing.T) {
 		t.Error("expected error for wrong agent kind")
 	}
 }
+
+func TestPrepareLaunch_WithOpenCodeProfile(t *testing.T) {
+	a := New(DefaultOptions())
+	req := baseReq()
+	req.OpenCodeProfile = "cortex"
+	spec, err := a.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasArgPair(spec.Args, "--agent", "cortex") {
+		t.Errorf("args missing --agent cortex pair: %v", spec.Args)
+	}
+}
+
+func TestPrepareLaunch_NoOpenCodeProfile(t *testing.T) {
+	a := New(DefaultOptions())
+	spec, err := a.PrepareLaunch(context.Background(), baseReq())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, arg := range spec.Args {
+		if arg == "--agent" {
+			t.Errorf("--agent should not appear when OpenCodeProfile is empty: %v", spec.Args)
+		}
+	}
+}
+
+func TestPrepareLaunch_RawAgentArgRejected(t *testing.T) {
+	a := New(DefaultOptions())
+	req := baseReq()
+	req.Args = []string{"--agent", "cortex"}
+	_, err := a.PrepareLaunch(context.Background(), req)
+	if err == nil {
+		t.Error("expected error for managed arg --agent in req.Args")
+	}
+}
+
+func TestPrepareLaunch_ArgOrdering(t *testing.T) {
+	a := New(DefaultOptions())
+	req := baseReq()
+	req.OpenCodeProfile = "cortex"
+	req.Prompt = "do the thing"
+	req.Args = []string{"--no-auto-share"}
+	spec, err := a.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	agentIdx := -1
+	promptIdx := -1
+	callerIdx := -1
+	for i, arg := range spec.Args {
+		switch arg {
+		case "--agent":
+			agentIdx = i
+		case "--prompt":
+			promptIdx = i
+		case "--no-auto-share":
+			callerIdx = i
+		}
+	}
+	if agentIdx == -1 {
+		t.Fatalf("--agent not found in args: %v", spec.Args)
+	}
+	if promptIdx == -1 {
+		t.Fatalf("--prompt not found in args: %v", spec.Args)
+	}
+	if callerIdx == -1 {
+		t.Fatalf("caller arg not found in args: %v", spec.Args)
+	}
+	if agentIdx > promptIdx {
+		t.Errorf("--agent (%d) should come before --prompt (%d)", agentIdx, promptIdx)
+	}
+	if promptIdx > callerIdx {
+		t.Errorf("--prompt (%d) should come before caller args (%d)", promptIdx, callerIdx)
+	}
+}

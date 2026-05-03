@@ -78,7 +78,10 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 		return agentruntime.LaunchSpec{}, fmt.Errorf("marshal opencode config: %w", err)
 	}
 
-	args := make([]string, 0, len(req.Args)+2)
+	args := make([]string, 0, len(req.Args)+4)
+	if req.OpenCodeProfile != "" {
+		args = append(args, "--agent", req.OpenCodeProfile)
+	}
 	if req.Prompt != "" {
 		args = append(args, "--prompt", req.Prompt)
 	}

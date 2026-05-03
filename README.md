@@ -78,6 +78,8 @@ OpenCode instruction files.
 - `Instructions`: runtime-specific instruction/system-prompt input.
 - `MCPServers`: stdio or HTTP MCP servers the adapter must synthesize into the
   runtime's supported config shape.
+- `OpenCodeProfile`: OpenCode only. Selects the OpenCode agent profile
+  (`--agent <profile>`). Leave empty to use the OpenCode default.
 
 Ordinary runtime options should be passed through `Command`, `Args`, and `Env`.
 The library only models behavior it must synthesize for portability, such as
@@ -87,7 +89,7 @@ Some keys and arguments are adapter-managed. `AGENTRUNTIME_SESSION_ID` is
 generated into `LaunchSpec.Env` for all adapters and must not conflict with
 `StartRequest.ID`. OpenCode also manages `OPENCODE_CONFIG_CONTENT`.
 Adapter-managed CLI arguments, such as Claude Code's `--session-id` or
-OpenCode's `--prompt`, are rejected when passed through `Args`.
+OpenCode's `--prompt` and `--agent`, are rejected when passed through `Args`.
 
 When you execute a `LaunchSpec`, include `LaunchSpec.Env` in the child process
 environment. It contains generated correlation/config values even when

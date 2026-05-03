@@ -30,15 +30,16 @@ const (
 )
 
 type StartRequest struct {
-	ID           string
-	Agent        AgentKind
-	Command      string
-	Args         []string
-	Env          map[string]string
-	Workdir      string
-	Prompt       string
-	Instructions string
-	MCPServers   []MCPServerConfig
+	ID              string
+	Agent           AgentKind
+	Command         string
+	Args            []string
+	Env             map[string]string
+	Workdir         string
+	Prompt          string
+	Instructions    string
+	MCPServers      []MCPServerConfig
+	OpenCodeProfile string // OpenCode --agent profile name; leave empty for OpenCode default
 }
 
 type Event struct {
