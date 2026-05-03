@@ -93,7 +93,7 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 			args = append(args, "--continue")
 		}
 	}
-	if req.Prompt != "" && !(req.Resume && req.ResumeID != "") {
+	if req.Prompt != "" && (!req.Resume || req.ResumeID == "") {
 		args = append(args, "--prompt", req.Prompt)
 	}
 	args = append(args, req.Args...)
