@@ -127,6 +127,92 @@ func TestPrepareLaunchIgnoresBlankInstructions(t *testing.T) {
 	}
 }
 
+func TestPrepareLaunchResumeBare(t *testing.T) {
+	adapter := New(DefaultOptions())
+	req := agentruntime.StartRequest{
+		ID:      "session-1",
+		Agent:   agentruntime.AgentCodex,
+		Workdir: "/tmp/work",
+		Resume:  true,
+	}
+
+	spec, err := adapter.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(spec.Args) < 2 || spec.Args[0] != "resume" || spec.Args[1] != "--last" {
+		t.Fatalf("args[0:2]: %q, want [resume --last]", spec.Args)
+	}
+	if spec.Env["AGENTRUNTIME_SESSION_ID"] != "session-1" {
+		t.Fatalf("AGENTRUNTIME_SESSION_ID: %q", spec.Env["AGENTRUNTIME_SESSION_ID"])
+	}
+}
+
+func TestPrepareLaunchResumeBareSupressesPrompt(t *testing.T) {
+	// codex resume --last treats the next positional as SESSION_ID, not PROMPT.
+	// A prompt passed alongside bare resume would be misread as a session ID lookup.
+	adapter := New(DefaultOptions())
+	req := agentruntime.StartRequest{
+		ID:      "session-1",
+		Agent:   agentruntime.AgentCodex,
+		Workdir: "/tmp/work",
+		Resume:  true,
+		Prompt:  "What word did you say?",
+	}
+
+	spec, err := adapter.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, arg := range spec.Args {
+		if arg == "What word did you say?" {
+			t.Fatalf("prompt must not appear in bare resume args: %v", spec.Args)
+		}
+	}
+}
+
+func TestPrepareLaunchResumeSpecific(t *testing.T) {
+	adapter := New(DefaultOptions())
+	req := agentruntime.StartRequest{
+		ID:       "session-1",
+		Agent:    agentruntime.AgentCodex,
+		Workdir:  "/tmp/work",
+		Resume:   true,
+		ResumeID: "00000000-0000-4000-8000-000000000099",
+	}
+
+	spec, err := adapter.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(spec.Args) < 2 || spec.Args[0] != "resume" || spec.Args[1] != "00000000-0000-4000-8000-000000000099" {
+		t.Fatalf("args[0:2]: %q, want [resume 00000000-0000-4000-8000-000000000099]", spec.Args)
+	}
+}
+
+func TestPrepareLaunchResumeWithPrompt(t *testing.T) {
+	adapter := New(DefaultOptions())
+	req := agentruntime.StartRequest{
+		ID:       "session-1",
+		Agent:    agentruntime.AgentCodex,
+		Workdir:  "/tmp/work",
+		Resume:   true,
+		ResumeID: "abc-def",
+		Prompt:   "Continue where we left off.",
+	}
+
+	spec, err := adapter.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(spec.Args) < 2 || spec.Args[0] != "resume" || spec.Args[1] != "abc-def" {
+		t.Fatalf("resume subcommand and session id: %q", spec.Args)
+	}
+	if got := spec.Args[len(spec.Args)-1]; got != req.Prompt {
+		t.Fatalf("prompt should be last arg: %q", got)
+	}
+}
+
 func TestPrepareLaunchValidation(t *testing.T) {
 	adapter := New(DefaultOptions())
 

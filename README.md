@@ -80,6 +80,21 @@ OpenCode instruction files.
   runtime's supported config shape.
 - `OpenCodeProfile`: OpenCode only. Selects the OpenCode agent profile
   (`--agent <profile>`). Leave empty to use the OpenCode default.
+- `Resume`: when true, request the adapter to resume an existing session instead
+  of starting a fresh one. Each adapter synthesizes resume in its own native
+  shape: Claude emits `--resume [ResumeID]` and skips generating a new
+  `--session-id`; Codex uses the `resume` subcommand (`codex resume --last` or
+  `codex resume <ResumeID>`); OpenCode emits `--continue` or `--session
+  <ResumeID>`.
+- `ResumeID`: native session ID to resume when `Resume` is true. If empty, each
+  adapter resumes the most recently used session (Claude bare `--resume`, Codex
+  `--last`, OpenCode `--continue`). `AGENTRUNTIME_SESSION_ID` is always set to
+  `StartRequest.ID` for caller-owned correlation regardless of resume mode.
+  Prompt suppression applies in two cases: Codex bare resume (`ResumeID` empty)
+  suppresses `Prompt` because `codex resume --last` treats the next positional
+  as `SESSION_ID` not `PROMPT`; OpenCode specific resume (`ResumeID` non-empty)
+  suppresses `Prompt` because OpenCode does not accept `--prompt` alongside
+  `--session <id>`.
 
 Ordinary runtime options should be passed through `Command`, `Args`, and `Env`.
 The library only models behavior it must synthesize for portability, such as
@@ -88,8 +103,9 @@ MCP config, instruction injection, session correlation, and hook/plugin setup.
 Some keys and arguments are adapter-managed. `AGENTRUNTIME_SESSION_ID` is
 generated into `LaunchSpec.Env` for all adapters and must not conflict with
 `StartRequest.ID`. OpenCode also manages `OPENCODE_CONFIG_CONTENT`.
-Adapter-managed CLI arguments, such as Claude Code's `--session-id` or
-OpenCode's `--prompt` and `--agent`, are rejected when passed through `Args`.
+Adapter-managed CLI arguments are rejected when passed through `Args`: Claude
+Code manages `--session-id` and `--resume`; OpenCode manages `--prompt`,
+`--agent`, `--continue`, `-c`, `--session`, and `-s`.
 
 When you execute a `LaunchSpec`, include `LaunchSpec.Env` in the child process
 environment. It contains generated correlation/config values even when

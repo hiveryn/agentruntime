@@ -12,9 +12,9 @@
 
 - Root package: shared public types and the `Adapter` interface.
 - `adapter/<agent>`: agent-specific launch synthesis, hook setup, and native event normalization.
-- `adapter/codex`: uses `AGENTRUNTIME_SESSION_ID` for caller-owned correlation; hook setup writes `~/.codex/hooks.json`; `codex.HookCommand(endpoint)` generates a self-contained node hook command.
-- `adapter/claude`: uses `--session-id` UUID for native correlation; hook setup writes `~/.claude/settings.json`; `claude.HookCommand(endpoint)` generates a self-contained node hook command.
-- `adapter/opencode`: uses `OPENCODE_CONFIG_CONTENT` for per-session config; hook setup writes a TypeScript plugin to `~/.config/opencode/plugins/`; plugin POSTs events to `<endpoint>/opencode`.
+- `adapter/codex`: uses `AGENTRUNTIME_SESSION_ID` for caller-owned correlation; hook setup writes `~/.codex/hooks.json`; `codex.HookCommand(endpoint)` generates a self-contained node hook command. Resume: `codex resume --last` (bare) or `codex resume <id>` (specific); bare resume suppresses `Prompt` because `--last` treats the next positional as `SESSION_ID`.
+- `adapter/claude`: uses `--session-id` UUID for native correlation; hook setup writes `~/.claude/settings.json`; `claude.HookCommand(endpoint)` generates a self-contained node hook command. Resume: `--resume` (bare) or `--resume <id>` (specific); skips `NewSessionID`; `--resume` is a managed arg.
+- `adapter/opencode`: uses `OPENCODE_CONFIG_CONTENT` for per-session config; hook setup writes a TypeScript plugin to `~/.config/opencode/plugins/`; plugin POSTs events to `<endpoint>/opencode`. Resume: `--continue` (bare) or `--session <id>` (specific); specific resume suppresses `Prompt`; `--continue`, `-c`, `--session`, `-s` are managed args.
 - `ingest`: reusable in-process event hub, primitive byte-ingest API, and optional local HTTP hook handler.
 
 ## Event Model

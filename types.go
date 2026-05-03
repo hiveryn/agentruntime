@@ -40,6 +40,8 @@ type StartRequest struct {
 	Instructions    string
 	MCPServers      []MCPServerConfig
 	OpenCodeProfile string // OpenCode --agent profile name; leave empty for OpenCode default
+	Resume          bool   // Resume an existing session instead of starting a new one
+	ResumeID        string // Native session ID to resume; if empty, resumes the most recent session
 }
 
 type Event struct {

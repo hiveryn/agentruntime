@@ -113,6 +113,77 @@ func TestPrepareLaunchHTTPMCPAndAppendInstructions(t *testing.T) {
 	}
 }
 
+func TestPrepareLaunchResumeBare(t *testing.T) {
+	called := false
+	adapter := New(Options{
+		NewSessionID: func() (string, error) {
+			called = true
+			return "should-not-be-used", nil
+		},
+	})
+	req := agentruntime.StartRequest{
+		ID:      "hiv-claude-resume-1",
+		Agent:   agentruntime.AgentClaude,
+		Workdir: "/tmp/work",
+		Resume:  true,
+	}
+
+	spec, err := adapter.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if called {
+		t.Fatal("NewSessionID must not be called in resume mode")
+	}
+	foundResume := false
+	for _, arg := range spec.Args {
+		if arg == "--resume" {
+			foundResume = true
+		}
+		if arg == "--session-id" {
+			t.Fatalf("--session-id must not appear in resume mode: %q", spec.Args)
+		}
+	}
+	if !foundResume {
+		t.Fatalf("--resume missing from args: %q", spec.Args)
+	}
+	if spec.Env["AGENTRUNTIME_SESSION_ID"] != req.ID {
+		t.Fatalf("AGENTRUNTIME_SESSION_ID: %q", spec.Env["AGENTRUNTIME_SESSION_ID"])
+	}
+}
+
+func TestPrepareLaunchResumeSpecific(t *testing.T) {
+	adapter := New(Options{
+		NewSessionID: func() (string, error) {
+			t.Fatal("NewSessionID must not be called in resume mode")
+			return "", nil
+		},
+	})
+	req := agentruntime.StartRequest{
+		ID:       "hiv-claude-resume-2",
+		Agent:    agentruntime.AgentClaude,
+		Workdir:  "/tmp/work",
+		Resume:   true,
+		ResumeID: "00000000-0000-4000-8000-000000000099",
+	}
+
+	spec, err := adapter.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasArgPair(spec.Args, "--resume", "00000000-0000-4000-8000-000000000099") {
+		t.Fatalf("args missing --resume <id> pair: %q", spec.Args)
+	}
+	for _, arg := range spec.Args {
+		if arg == "--session-id" {
+			t.Fatalf("--session-id must not appear in resume mode: %q", spec.Args)
+		}
+	}
+	if spec.Env["AGENTRUNTIME_SESSION_ID"] != req.ID {
+		t.Fatalf("AGENTRUNTIME_SESSION_ID: %q", spec.Env["AGENTRUNTIME_SESSION_ID"])
+	}
+}
+
 func TestPrepareLaunchValidation(t *testing.T) {
 	adapter := New(DefaultOptions())
 
@@ -127,6 +198,9 @@ func TestPrepareLaunchValidation(t *testing.T) {
 	}
 	if _, err := adapter.PrepareLaunch(context.Background(), agentruntime.StartRequest{ID: "x", Agent: agentruntime.AgentClaude, Workdir: "/tmp", Args: []string{"--session-id", "override"}}); err == nil {
 		t.Fatal("expected managed argument error")
+	}
+	if _, err := adapter.PrepareLaunch(context.Background(), agentruntime.StartRequest{ID: "x", Agent: agentruntime.AgentClaude, Workdir: "/tmp", Args: []string{"--resume", "some-id"}}); err == nil {
+		t.Fatal("expected managed argument error for --resume")
 	}
 }
 

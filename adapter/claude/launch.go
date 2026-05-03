@@ -28,6 +28,7 @@ var managedArgs = map[string]struct{}{
 	"--system-prompt":        {},
 	"--mcp-config":           {},
 	"--session-id":           {},
+	"--resume":               {},
 }
 
 func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest) (agentruntime.LaunchSpec, error) {
@@ -51,11 +52,6 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 		command = "claude"
 	}
 
-	sessionID, err := a.options.NewSessionID()
-	if err != nil {
-		return agentruntime.LaunchSpec{}, err
-	}
-
 	args := make([]string, 0, len(req.Args)+8)
 	cleanupPaths := make([]string, 0, 1)
 	if req.Prompt != "" {
@@ -76,8 +72,20 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 		args = append(args, "--mcp-config", path)
 		cleanupPaths = append(cleanupPaths, path)
 	}
-	if sessionID != "" {
-		args = append(args, "--session-id", sessionID)
+	if req.Resume {
+		if req.ResumeID != "" {
+			args = append(args, "--resume", req.ResumeID)
+		} else {
+			args = append(args, "--resume")
+		}
+	} else {
+		sessionID, err := a.options.NewSessionID()
+		if err != nil {
+			return agentruntime.LaunchSpec{}, err
+		}
+		if sessionID != "" {
+			args = append(args, "--session-id", sessionID)
+		}
 	}
 	args = append(args, req.Args...)
 

@@ -27,6 +27,13 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 	}
 
 	args := make([]string, 0, len(req.Args)+8)
+	if req.Resume {
+		if req.ResumeID != "" {
+			args = append(args, "resume", req.ResumeID)
+		} else {
+			args = append(args, "resume", "--last")
+		}
+	}
 	if strings.TrimSpace(req.Instructions) != "" {
 		// Keep durable session/role instructions additive by injecting them as a
 		// separate developer message instead of replacing Codex base instructions.
@@ -43,7 +50,9 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 
 	args = append(args, req.Args...)
 	args = append(args, "--cd", req.Workdir)
-	if req.Prompt != "" {
+	// For bare resume (--last), codex treats the next positional as SESSION_ID not PROMPT.
+	// Only append the prompt when starting fresh or resuming a specific session by ID.
+	if req.Prompt != "" && !(req.Resume && req.ResumeID == "") {
 		args = append(args, req.Prompt)
 	}
 

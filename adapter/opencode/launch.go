@@ -25,8 +25,12 @@ type ocMCPServer struct {
 }
 
 var managedArgs = map[string]struct{}{
-	"--prompt": {},
-	"--agent":  {},
+	"--prompt":    {},
+	"--agent":     {},
+	"--continue":  {},
+	"-c":          {},
+	"--session":   {},
+	"-s":          {},
 }
 
 func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest) (agentruntime.LaunchSpec, error) {
@@ -78,11 +82,18 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 		return agentruntime.LaunchSpec{}, fmt.Errorf("marshal opencode config: %w", err)
 	}
 
-	args := make([]string, 0, len(req.Args)+4)
+	args := make([]string, 0, len(req.Args)+6)
 	if req.OpenCodeProfile != "" {
 		args = append(args, "--agent", req.OpenCodeProfile)
 	}
-	if req.Prompt != "" {
+	if req.Resume {
+		if req.ResumeID != "" {
+			args = append(args, "--session", req.ResumeID)
+		} else {
+			args = append(args, "--continue")
+		}
+	}
+	if req.Prompt != "" && !(req.Resume && req.ResumeID != "") {
 		args = append(args, "--prompt", req.Prompt)
 	}
 	args = append(args, req.Args...)

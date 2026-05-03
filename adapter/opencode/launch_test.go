@@ -273,6 +273,144 @@ func TestPrepareLaunch_ReservedEnvConflict_OPENCODE_CONFIG_CONTENT_EmptyValue(t 
 	}
 }
 
+func TestPrepareLaunch_ResumeBare(t *testing.T) {
+	a := New(DefaultOptions())
+	req := baseReq()
+	req.Resume = true
+
+	spec, err := a.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, arg := range spec.Args {
+		if arg == "--continue" {
+			found = true
+		}
+		if arg == "--session" {
+			t.Errorf("--session must not appear for bare resume: %v", spec.Args)
+		}
+	}
+	if !found {
+		t.Errorf("--continue missing from args: %v", spec.Args)
+	}
+	if spec.Env["AGENTRUNTIME_SESSION_ID"] != "session-1" {
+		t.Errorf("AGENTRUNTIME_SESSION_ID: %q", spec.Env["AGENTRUNTIME_SESSION_ID"])
+	}
+}
+
+func TestPrepareLaunch_ResumeSpecific(t *testing.T) {
+	a := New(DefaultOptions())
+	req := baseReq()
+	req.Resume = true
+	req.ResumeID = "ses_21277c40fffeuBv0E2V7Y81mkA"
+
+	spec, err := a.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasArgPair(spec.Args, "--session", "ses_21277c40fffeuBv0E2V7Y81mkA") {
+		t.Errorf("args missing --session <id> pair: %v", spec.Args)
+	}
+	for _, arg := range spec.Args {
+		if arg == "--continue" {
+			t.Errorf("--continue must not appear for specific resume: %v", spec.Args)
+		}
+	}
+}
+
+func TestPrepareLaunch_ResumeManagedArgRejected(t *testing.T) {
+	a := New(DefaultOptions())
+	req := baseReq()
+	req.Args = []string{"--continue"}
+	if _, err := a.PrepareLaunch(context.Background(), req); err == nil {
+		t.Error("expected error for managed arg --continue in req.Args")
+	}
+	req.Args = []string{"-c"}
+	if _, err := a.PrepareLaunch(context.Background(), req); err == nil {
+		t.Error("expected error for managed arg -c in req.Args")
+	}
+	req.Args = []string{"--session", "some-id"}
+	if _, err := a.PrepareLaunch(context.Background(), req); err == nil {
+		t.Error("expected error for managed arg --session in req.Args")
+	}
+	req.Args = []string{"-s", "some-id"}
+	if _, err := a.PrepareLaunch(context.Background(), req); err == nil {
+		t.Error("expected error for managed arg -s in req.Args")
+	}
+}
+
+func TestPrepareLaunch_ResumeArgOrdering(t *testing.T) {
+	// Use bare resume (no ResumeID) so --prompt is still emitted.
+	a := New(DefaultOptions())
+	req := baseReq()
+	req.OpenCodeProfile = "cortex"
+	req.Resume = true
+	req.Prompt = "continue the work"
+	req.Args = []string{"--no-auto-share"}
+
+	spec, err := a.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	agentIdx, continueIdx, promptIdx, callerIdx := -1, -1, -1, -1
+	for i, arg := range spec.Args {
+		switch arg {
+		case "--agent":
+			agentIdx = i
+		case "--continue":
+			continueIdx = i
+		case "--prompt":
+			promptIdx = i
+		case "--no-auto-share":
+			callerIdx = i
+		}
+	}
+	if agentIdx == -1 {
+		t.Fatalf("--agent not found: %v", spec.Args)
+	}
+	if continueIdx == -1 {
+		t.Fatalf("--continue not found: %v", spec.Args)
+	}
+	if promptIdx == -1 {
+		t.Fatalf("--prompt not found: %v", spec.Args)
+	}
+	if callerIdx == -1 {
+		t.Fatalf("caller arg not found: %v", spec.Args)
+	}
+	if agentIdx > continueIdx {
+		t.Errorf("--agent (%d) should come before --continue (%d)", agentIdx, continueIdx)
+	}
+	if continueIdx > promptIdx {
+		t.Errorf("--continue (%d) should come before --prompt (%d)", continueIdx, promptIdx)
+	}
+	if promptIdx > callerIdx {
+		t.Errorf("--prompt (%d) should come before caller args (%d)", promptIdx, callerIdx)
+	}
+}
+
+func TestPrepareLaunch_ResumeSpecificSuppressesPrompt(t *testing.T) {
+	a := New(DefaultOptions())
+	req := baseReq()
+	req.Resume = true
+	req.ResumeID = "ses_2125a66deffebPnI7tduCLf0NG"
+	req.Prompt = "What word did you say?"
+
+	spec, err := a.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, arg := range spec.Args {
+		if arg == "--prompt" {
+			t.Fatalf("--prompt must not appear when resuming a specific session by ID: %v", spec.Args)
+		}
+	}
+	if !hasArgPair(spec.Args, "--session", "ses_2125a66deffebPnI7tduCLf0NG") {
+		t.Fatalf("--session <id> missing: %v", spec.Args)
+	}
+}
+
 func TestPrepareLaunch_WrongAgent(t *testing.T) {
 	a := New(DefaultOptions())
 	req := baseReq()
