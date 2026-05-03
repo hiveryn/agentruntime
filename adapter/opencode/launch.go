@@ -84,6 +84,13 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 	}
 	args = append(args, req.Args...)
 
+	if v, ok := req.Env["AGENTRUNTIME_SESSION_ID"]; ok && v != "" && v != req.ID {
+		return agentruntime.LaunchSpec{}, fmt.Errorf("reserved env key AGENTRUNTIME_SESSION_ID is set to %q which conflicts with session ID %q", v, req.ID)
+	}
+	if v, ok := req.Env["OPENCODE_CONFIG_CONTENT"]; ok && v != "" {
+		return agentruntime.LaunchSpec{}, fmt.Errorf("reserved env key OPENCODE_CONFIG_CONTENT is managed by the opencode adapter and must not be provided by the caller")
+	}
+
 	env := buildEnv(req.Env, req.ID, string(configJSON))
 
 	return agentruntime.LaunchSpec{

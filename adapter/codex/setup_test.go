@@ -16,7 +16,6 @@ func TestEnsureSetupInstallsAndUpdatesMarkerScopedHooks(t *testing.T) {
 	root := t.TempDir()
 
 	req := agentruntime.SetupRequest{
-		Agents:     []agentruntime.AgentKind{agentruntime.AgentCodex},
 		Marker:     "hiveryn",
 		ConfigRoot: root,
 		Hook: agentruntime.HookCommand{
@@ -101,7 +100,6 @@ func TestRemoveSetupOnlyRemovesMatchingMarker(t *testing.T) {
 	}
 
 	result, err := adapter.RemoveSetup(context.Background(), agentruntime.SetupRequest{
-		Agents:     []agentruntime.AgentKind{agentruntime.AgentCodex},
 		Marker:     "hiveryn",
 		ConfigRoot: root,
 	})

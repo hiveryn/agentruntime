@@ -45,7 +45,6 @@ func main() {
 	}()
 
 	_, err := adapter.EnsureSetup(ctx, agentruntime.SetupRequest{
-		Agents: []agentruntime.AgentKind{agentruntime.AgentCodex},
 		Marker: "example",
 		Hook: agentruntime.HookCommand{
 			Command: "curl -s -X POST --data-binary @- http://127.0.0.1:9000/hook",
@@ -107,7 +106,6 @@ func main() {
 	// EnsureSetup writes hook entries into ~/.claude/settings.json scoped to
 	// the given marker — safe to call on every startup (idempotent).
 	_, err := adapter.EnsureSetup(ctx, agentruntime.SetupRequest{
-		Agents: []agentruntime.AgentKind{agentruntime.AgentClaude},
 		Marker: "example",
 		Hook: agentruntime.HookCommand{
 			Command: "curl -s -X POST --data-binary @- http://127.0.0.1:9000/hook",
@@ -177,10 +175,9 @@ func main() {
 	// EnsureSetup writes a marker-scoped TypeScript plugin into
 	// ~/.config/opencode/plugins/ — safe to call on every startup (idempotent).
 	_, err := adapter.EnsureSetup(ctx, agentruntime.SetupRequest{
-		Agents: []agentruntime.AgentKind{agentruntime.AgentOpenCode},
 		Marker: "example",
 		Hook: agentruntime.HookCommand{
-			Command: "http://127.0.0.1:9000",
+			Endpoint: "http://127.0.0.1:9000",
 		},
 	})
 	if err != nil {

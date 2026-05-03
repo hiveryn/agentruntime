@@ -74,21 +74,18 @@ export default {
 const managedMarker = "@managed-by-agentruntime: opencode"
 
 func (a *Adapter) EnsureSetup(_ context.Context, req agentruntime.SetupRequest) (agentruntime.SetupResult, error) {
-	if !appliesTo(req.Agents, agentruntime.AgentOpenCode) {
-		return agentruntime.SetupResult{}, nil
-	}
 	if req.Marker == "" {
 		return agentruntime.SetupResult{}, fmt.Errorf("missing marker")
 	}
-	if req.Hook.Command == "" {
-		return agentruntime.SetupResult{}, fmt.Errorf("missing hook command")
+	if req.Hook.Endpoint == "" {
+		return agentruntime.SetupResult{}, fmt.Errorf("missing hook endpoint")
 	}
 
 	path := pluginPath(req.ConfigRoot, req.Marker)
 
 	if data, err := os.ReadFile(path); err == nil {
 		if bytes.Contains(data, []byte(managedMarker)) {
-			if endpointInContent(string(data), req.Hook.Command) {
+			if endpointInContent(string(data), req.Hook.Endpoint) {
 				return agentruntime.SetupResult{Changed: false, Paths: []string{path}}, nil
 			}
 		} else {
@@ -102,7 +99,7 @@ func (a *Adapter) EnsureSetup(_ context.Context, req agentruntime.SetupRequest) 
 		return agentruntime.SetupResult{}, fmt.Errorf("opencode mkdir: %w", err)
 	}
 
-	content, err := renderPlugin(req.Hook.Command, req.Marker)
+	content, err := renderPlugin(req.Hook.Endpoint, req.Marker)
 	if err != nil {
 		return agentruntime.SetupResult{}, err
 	}
@@ -115,9 +112,6 @@ func (a *Adapter) EnsureSetup(_ context.Context, req agentruntime.SetupRequest) 
 }
 
 func (a *Adapter) RemoveSetup(_ context.Context, req agentruntime.SetupRequest) (agentruntime.SetupResult, error) {
-	if !appliesTo(req.Agents, agentruntime.AgentOpenCode) {
-		return agentruntime.SetupResult{}, nil
-	}
 	if req.Marker == "" {
 		return agentruntime.SetupResult{}, fmt.Errorf("missing marker")
 	}
@@ -190,16 +184,4 @@ func renderPlugin(endpoint, marker string) (string, error) {
 // The plugin posts to <endpoint>/opencode.
 func endpointInContent(content, endpoint string) bool {
 	return strings.Contains(content, endpoint+"/opencode")
-}
-
-func appliesTo(agents []agentruntime.AgentKind, target agentruntime.AgentKind) bool {
-	if len(agents) == 0 {
-		return true
-	}
-	for _, a := range agents {
-		if a == target {
-			return true
-		}
-	}
-	return false
 }

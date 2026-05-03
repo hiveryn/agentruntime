@@ -34,9 +34,6 @@ var hookEvents = []string{
 }
 
 func (a *Adapter) EnsureSetup(_ context.Context, req agentruntime.SetupRequest) (agentruntime.SetupResult, error) {
-	if !appliesTo(req.Agents, agentruntime.AgentClaude) {
-		return agentruntime.SetupResult{}, nil
-	}
 	if req.Marker == "" {
 		return agentruntime.SetupResult{}, fmt.Errorf("missing marker")
 	}
@@ -75,9 +72,6 @@ func (a *Adapter) EnsureSetup(_ context.Context, req agentruntime.SetupRequest) 
 }
 
 func (a *Adapter) RemoveSetup(_ context.Context, req agentruntime.SetupRequest) (agentruntime.SetupResult, error) {
-	if !appliesTo(req.Agents, agentruntime.AgentClaude) {
-		return agentruntime.SetupResult{}, nil
-	}
 	if req.Marker == "" {
 		return agentruntime.SetupResult{}, fmt.Errorf("missing marker")
 	}
@@ -238,16 +232,4 @@ func readJSONMap(path string) (map[string]any, error) {
 		root = map[string]any{}
 	}
 	return root, nil
-}
-
-func appliesTo(agents []agentruntime.AgentKind, target agentruntime.AgentKind) bool {
-	if len(agents) == 0 {
-		return true
-	}
-	for _, agent := range agents {
-		if agent == target {
-			return true
-		}
-	}
-	return false
 }

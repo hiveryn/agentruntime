@@ -18,9 +18,6 @@ const markerField = "agentruntimeMarker"
 var hookEvents = []string{"SessionStart", "UserPromptSubmit", "PreToolUse", "PermissionRequest", "PostToolUse", "Stop"}
 
 func (a *Adapter) EnsureSetup(_ context.Context, req agentruntime.SetupRequest) (agentruntime.SetupResult, error) {
-	if !appliesTo(req.Agents, agentruntime.AgentCodex) {
-		return agentruntime.SetupResult{}, nil
-	}
 	if req.Marker == "" {
 		return agentruntime.SetupResult{}, fmt.Errorf("missing marker")
 	}
@@ -61,9 +58,6 @@ func (a *Adapter) EnsureSetup(_ context.Context, req agentruntime.SetupRequest) 
 }
 
 func (a *Adapter) RemoveSetup(_ context.Context, req agentruntime.SetupRequest) (agentruntime.SetupResult, error) {
-	if !appliesTo(req.Agents, agentruntime.AgentCodex) {
-		return agentruntime.SetupResult{}, nil
-	}
 	if req.Marker == "" {
 		return agentruntime.SetupResult{}, fmt.Errorf("missing marker")
 	}
@@ -224,16 +218,4 @@ func codexHome(configRoot string) (string, error) {
 		return "", err
 	}
 	return filepath.Join(userHome, ".codex"), nil
-}
-
-func appliesTo(agents []agentruntime.AgentKind, target agentruntime.AgentKind) bool {
-	if len(agents) == 0 {
-		return true
-	}
-	for _, agent := range agents {
-		if agent == target {
-			return true
-		}
-	}
-	return false
 }

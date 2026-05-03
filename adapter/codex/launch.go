@@ -47,6 +47,10 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 		args = append(args, req.Prompt)
 	}
 
+	if v, ok := req.Env["AGENTRUNTIME_SESSION_ID"]; ok && v != "" && v != req.ID {
+		return agentruntime.LaunchSpec{}, fmt.Errorf("reserved env key AGENTRUNTIME_SESSION_ID is set to %q which conflicts with session ID %q", v, req.ID)
+	}
+
 	env := mergeEnv(req.Env, map[string]string{
 		"AGENTRUNTIME_SESSION_ID": req.ID,
 	})

@@ -223,6 +223,56 @@ func TestPrepareLaunch_CustomCommand(t *testing.T) {
 	}
 }
 
+func TestPrepareLaunch_ReservedEnvConflict_AGENTRUNTIME_SESSION_ID(t *testing.T) {
+	a := New(DefaultOptions())
+	req := baseReq()
+	req.Env = map[string]string{"AGENTRUNTIME_SESSION_ID": "someone-elses-id"}
+	_, err := a.PrepareLaunch(context.Background(), req)
+	if err == nil {
+		t.Error("expected error for reserved env key conflict")
+	}
+}
+
+func TestPrepareLaunch_ReservedEnvConflict_AGENTRUNTIME_SESSION_ID_SameValue(t *testing.T) {
+	a := New(DefaultOptions())
+	req := baseReq()
+	req.Env = map[string]string{"AGENTRUNTIME_SESSION_ID": "session-1"}
+	_, err := a.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestPrepareLaunch_ReservedEnvConflict_AGENTRUNTIME_SESSION_ID_EmptyValue(t *testing.T) {
+	a := New(DefaultOptions())
+	req := baseReq()
+	req.Env = map[string]string{"AGENTRUNTIME_SESSION_ID": ""}
+	_, err := a.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestPrepareLaunch_ReservedEnvConflict_OPENCODE_CONFIG_CONTENT(t *testing.T) {
+	a := New(DefaultOptions())
+	req := baseReq()
+	req.Env = map[string]string{"OPENCODE_CONFIG_CONTENT": "fake-config"}
+	_, err := a.PrepareLaunch(context.Background(), req)
+	if err == nil {
+		t.Error("expected error for reserved env key OPENCODE_CONFIG_CONTENT")
+	}
+}
+
+func TestPrepareLaunch_ReservedEnvConflict_OPENCODE_CONFIG_CONTENT_EmptyValue(t *testing.T) {
+	a := New(DefaultOptions())
+	req := baseReq()
+	req.Env = map[string]string{"OPENCODE_CONFIG_CONTENT": ""}
+	_, err := a.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal("empty OPENCODE_CONFIG_CONTENT should be allowed, got:", err)
+	}
+}
+
 func TestPrepareLaunch_WrongAgent(t *testing.T) {
 	a := New(DefaultOptions())
 	req := baseReq()

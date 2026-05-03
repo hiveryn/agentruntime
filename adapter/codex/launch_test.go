@@ -141,6 +141,54 @@ func TestPrepareLaunchValidation(t *testing.T) {
 	}
 }
 
+func TestPrepareLaunchReservedEnvConflict(t *testing.T) {
+	adapter := New(DefaultOptions())
+	req := agentruntime.StartRequest{
+		ID:      "session-1",
+		Agent:   agentruntime.AgentCodex,
+		Workdir: "/tmp/work",
+		Env:     map[string]string{"AGENTRUNTIME_SESSION_ID": "someone-elses-id"},
+	}
+	_, err := adapter.PrepareLaunch(context.Background(), req)
+	if err == nil {
+		t.Fatal("expected error for reserved env key conflict")
+	}
+}
+
+func TestPrepareLaunchReservedEnvSameValueAllowed(t *testing.T) {
+	adapter := New(DefaultOptions())
+	req := agentruntime.StartRequest{
+		ID:      "session-1",
+		Agent:   agentruntime.AgentCodex,
+		Workdir: "/tmp/work",
+		Env:     map[string]string{"AGENTRUNTIME_SESSION_ID": "session-1"},
+	}
+	spec, err := adapter.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if spec.Env["AGENTRUNTIME_SESSION_ID"] != "session-1" {
+		t.Fatalf("AGENTRUNTIME_SESSION_ID: %q", spec.Env["AGENTRUNTIME_SESSION_ID"])
+	}
+}
+
+func TestPrepareLaunchReservedEnvEmptyValueAllowed(t *testing.T) {
+	adapter := New(DefaultOptions())
+	req := agentruntime.StartRequest{
+		ID:      "session-1",
+		Agent:   agentruntime.AgentCodex,
+		Workdir: "/tmp/work",
+		Env:     map[string]string{"AGENTRUNTIME_SESSION_ID": ""},
+	}
+	spec, err := adapter.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if spec.Env["AGENTRUNTIME_SESSION_ID"] != "session-1" {
+		t.Fatalf("AGENTRUNTIME_SESSION_ID: %q", spec.Env["AGENTRUNTIME_SESSION_ID"])
+	}
+}
+
 func hasArgPair(args []string, key, value string) bool {
 	for i := 0; i+1 < len(args); i++ {
 		if args[i] == key && args[i+1] == value {

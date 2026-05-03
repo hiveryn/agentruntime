@@ -41,12 +41,6 @@ type StartRequest struct {
 	MCPServers   []MCPServerConfig
 }
 
-type Session struct {
-	ID       string
-	NativeID string
-	Events   <-chan Event
-}
-
 type Event struct {
 	ID                string
 	NativeID          string
@@ -81,12 +75,12 @@ type MCPServerConfig struct {
 
 type HookCommand struct {
 	Command       string
+	Endpoint      string
 	Timeout       time.Duration
 	StatusMessage string
 }
 
 type SetupRequest struct {
-	Agents     []AgentKind
 	Marker     string
 	ConfigRoot string
 	Hook       HookCommand

@@ -15,7 +15,7 @@ func baseCfg(t *testing.T) agentruntime.SetupRequest {
 	return agentruntime.SetupRequest{
 		Marker: "test-marker",
 		Hook: agentruntime.HookCommand{
-			Command: "http://127.0.0.1:9000",
+			Endpoint: "http://127.0.0.1:9000",
 		},
 	}
 }
@@ -89,7 +89,7 @@ func TestEnsureSetup_EndpointChanged(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	req.Hook.Command = "http://127.0.0.1:9001"
+	req.Hook.Endpoint = "http://127.0.0.1:9001"
 	res, err := a.EnsureSetup(context.Background(), req)
 	if err != nil {
 		t.Fatalf("EnsureSetup with new endpoint: %v", err)
@@ -128,26 +128,6 @@ func TestEnsureSetup_RefusesNonManaged(t *testing.T) {
 	}
 }
 
-func TestEnsureSetup_AgentFilter(t *testing.T) {
-	a := New(DefaultOptions())
-	root := t.TempDir()
-	req := baseCfg(t)
-	req.ConfigRoot = root
-	req.Agents = []agentruntime.AgentKind{agentruntime.AgentClaude}
-
-	res, err := a.EnsureSetup(context.Background(), req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if res.Changed {
-		t.Error("expected no-op when agents filter excludes opencode")
-	}
-	path := pluginPathForTest(root, req.Marker)
-	if _, err := os.Stat(path); !os.IsNotExist(err) {
-		t.Error("plugin file should not exist when filtered out")
-	}
-}
-
 func TestEnsureSetup_MissingMarker(t *testing.T) {
 	a := New(DefaultOptions())
 	root := t.TempDir()
@@ -161,16 +141,16 @@ func TestEnsureSetup_MissingMarker(t *testing.T) {
 	}
 }
 
-func TestEnsureSetup_MissingCommand(t *testing.T) {
+func TestEnsureSetup_MissingEndpoint(t *testing.T) {
 	a := New(DefaultOptions())
 	root := t.TempDir()
 	req := baseCfg(t)
 	req.ConfigRoot = root
-	req.Hook.Command = ""
+	req.Hook.Endpoint = ""
 
 	_, err := a.EnsureSetup(context.Background(), req)
 	if err == nil {
-		t.Error("expected error for missing hook command")
+		t.Error("expected error for missing hook endpoint")
 	}
 }
 
