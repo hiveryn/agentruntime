@@ -344,10 +344,9 @@ func TestPrepareLaunch_ResumeArgOrdering(t *testing.T) {
 	// Use bare resume (no ResumeID) so --prompt is still emitted.
 	a := New(DefaultOptions())
 	req := baseReq()
-	req.OpenCodeProfile = "cortex"
 	req.Resume = true
 	req.Prompt = "continue the work"
-	req.Args = []string{"--no-auto-share"}
+	req.Args = []string{"--agent", "cortex", "--no-auto-share"}
 
 	spec, err := a.PrepareLaunch(context.Background(), req)
 	if err != nil {
@@ -379,14 +378,15 @@ func TestPrepareLaunch_ResumeArgOrdering(t *testing.T) {
 	if callerIdx == -1 {
 		t.Fatalf("caller arg not found: %v", spec.Args)
 	}
-	if agentIdx > continueIdx {
-		t.Errorf("--agent (%d) should come before --continue (%d)", agentIdx, continueIdx)
-	}
+	// Synthesized args (--continue, --prompt) come before caller args (--agent, --no-auto-share).
 	if continueIdx > promptIdx {
 		t.Errorf("--continue (%d) should come before --prompt (%d)", continueIdx, promptIdx)
 	}
-	if promptIdx > callerIdx {
-		t.Errorf("--prompt (%d) should come before caller args (%d)", promptIdx, callerIdx)
+	if promptIdx > agentIdx {
+		t.Errorf("--prompt (%d) should come before caller args (%d)", promptIdx, agentIdx)
+	}
+	if agentIdx > callerIdx {
+		t.Errorf("--agent (%d) should come before --no-auto-share (%d)", agentIdx, callerIdx)
 	}
 }
 
@@ -421,10 +421,10 @@ func TestPrepareLaunch_WrongAgent(t *testing.T) {
 	}
 }
 
-func TestPrepareLaunch_WithOpenCodeProfile(t *testing.T) {
+func TestPrepareLaunch_AgentArgPassesThrough(t *testing.T) {
 	a := New(DefaultOptions())
 	req := baseReq()
-	req.OpenCodeProfile = "cortex"
+	req.Args = []string{"--agent", "cortex"}
 	spec, err := a.PrepareLaunch(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
@@ -434,7 +434,7 @@ func TestPrepareLaunch_WithOpenCodeProfile(t *testing.T) {
 	}
 }
 
-func TestPrepareLaunch_NoOpenCodeProfile(t *testing.T) {
+func TestPrepareLaunch_NoAgentArgByDefault(t *testing.T) {
 	a := New(DefaultOptions())
 	spec, err := a.PrepareLaunch(context.Background(), baseReq())
 	if err != nil {
@@ -442,18 +442,8 @@ func TestPrepareLaunch_NoOpenCodeProfile(t *testing.T) {
 	}
 	for _, arg := range spec.Args {
 		if arg == "--agent" {
-			t.Errorf("--agent should not appear when OpenCodeProfile is empty: %v", spec.Args)
+			t.Errorf("--agent should not appear when not in req.Args: %v", spec.Args)
 		}
-	}
-}
-
-func TestPrepareLaunch_RawAgentArgRejected(t *testing.T) {
-	a := New(DefaultOptions())
-	req := baseReq()
-	req.Args = []string{"--agent", "cortex"}
-	_, err := a.PrepareLaunch(context.Background(), req)
-	if err == nil {
-		t.Error("expected error for managed arg --agent in req.Args")
 	}
 }
 
@@ -722,7 +712,7 @@ func TestPrepareLaunch_EmptyAgentConfig(t *testing.T) {
 func TestPrepareLaunch_AgentConfigCoexistsWithMCPInstructionsProfile(t *testing.T) {
 	a := New(DefaultOptions())
 	req := baseReq()
-	req.OpenCodeProfile = "cortex"
+	req.Args = []string{"--agent", "cortex"}
 	req.Instructions = "Be concise."
 	req.MCPServers = []agentruntime.MCPServerConfig{{
 		Name:    "tools",
@@ -822,9 +812,8 @@ func TestPrepareLaunch_AgentConfigNoPrompt(t *testing.T) {
 func TestPrepareLaunch_ArgOrdering(t *testing.T) {
 	a := New(DefaultOptions())
 	req := baseReq()
-	req.OpenCodeProfile = "cortex"
 	req.Prompt = "do the thing"
-	req.Args = []string{"--no-auto-share"}
+	req.Args = []string{"--agent", "cortex", "--no-auto-share"}
 	spec, err := a.PrepareLaunch(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
@@ -852,10 +841,11 @@ func TestPrepareLaunch_ArgOrdering(t *testing.T) {
 	if callerIdx == -1 {
 		t.Fatalf("caller arg not found in args: %v", spec.Args)
 	}
-	if agentIdx > promptIdx {
-		t.Errorf("--agent (%d) should come before --prompt (%d)", agentIdx, promptIdx)
+	// Synthesized --prompt comes before caller args (--agent, --no-auto-share).
+	if promptIdx > agentIdx {
+		t.Errorf("--prompt (%d) should come before caller args (%d)", promptIdx, agentIdx)
 	}
-	if promptIdx > callerIdx {
-		t.Errorf("--prompt (%d) should come before caller args (%d)", promptIdx, callerIdx)
+	if agentIdx > callerIdx {
+		t.Errorf("--agent (%d) should come before --no-auto-share (%d)", agentIdx, callerIdx)
 	}
 }

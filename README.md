@@ -88,8 +88,6 @@ agentruntime.HookCommand{Endpoint: "http://127.0.0.1:9000"}
 - **`Instructions`** — runtime-specific instruction/system-prompt input.
 - **`MCPServers`** — stdio or HTTP MCP servers synthesized into the runtime's
   config shape.
-- **`OpenCodeProfile`** — (OpenCode only) selects `--agent <profile>`. Leave
-  empty for OpenCode default.
 - **`OpenCodeAgentConfig`** — (OpenCode only) agent profile definitions merged
   into the `agent` section of `OPENCODE_CONFIG_CONTENT`. Each key is the profile
   name; the value is an `OpenCodeAgentConfig` with `Description`, `Mode`,
@@ -147,7 +145,7 @@ through `StartRequest.Args`:
 |----------|----------------------------------------------------------------------------------|
 | Claude   | `--append-system-prompt`, `--system-prompt`, `--mcp-config`, `--session-id`, `--resume` |
 | Codex    | (none — top-level args pass through; `resume` is a subcommand)                   |
-| OpenCode | `--prompt`, `--agent`, `--continue`, `-c`, `--session`, `-s`                     |
+| OpenCode | `--prompt`, `--continue`, `-c`, `--session`, `-s`                                |
 
 ### Resume Behavior
 

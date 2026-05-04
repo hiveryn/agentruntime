@@ -39,7 +39,6 @@ type StartRequest struct {
 	Prompt              string
 	Instructions        string
 	MCPServers          []MCPServerConfig
-	OpenCodeProfile     string                         // OpenCode --agent profile name; leave empty for OpenCode default
 	OpenCodeAgentConfig map[string]OpenCodeAgentConfig // OpenCode agent profile definitions merged into OPENCODE_CONFIG_CONTENT
 	Resume              bool                           // Resume an existing session instead of starting a new one
 	ResumeID            string                         // Native session ID to resume; if empty, resumes the most recent session

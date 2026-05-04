@@ -34,7 +34,6 @@ type ocMCPServer struct {
 
 var managedArgs = map[string]struct{}{
 	"--prompt":   {},
-	"--agent":    {},
 	"--continue": {},
 	"-c":         {},
 	"--session":  {},
@@ -103,9 +102,6 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 	}
 
 	args := make([]string, 0, len(req.Args)+6)
-	if req.OpenCodeProfile != "" {
-		args = append(args, "--agent", req.OpenCodeProfile)
-	}
 	if req.Resume {
 		if req.ResumeID != "" {
 			args = append(args, "--session", req.ResumeID)
