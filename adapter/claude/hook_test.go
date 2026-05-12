@@ -14,6 +14,18 @@ import (
 	"github.com/hiveryn/agentruntime"
 )
 
+func envWithoutAgentRuntimeSessionID() []string {
+	env := os.Environ()
+	filtered := env[:0]
+	for _, entry := range env {
+		if strings.HasPrefix(entry, "AGENTRUNTIME_SESSION_ID=") {
+			continue
+		}
+		filtered = append(filtered, entry)
+	}
+	return filtered
+}
+
 func TestHookCommandReturnsPopulatedHookCommand(t *testing.T) {
 	hc := HookCommand("http://127.0.0.1:9000")
 	if hc.Command == "" {
@@ -272,7 +284,7 @@ func TestHookCommandFallsBackToNativeIDWhenCallerIDMissing(t *testing.T) {
 	hc := HookCommand(server.URL)
 
 	cmd := exec.Command("sh", "-c", hc.Command)
-	cmd.Env = os.Environ()
+	cmd.Env = envWithoutAgentRuntimeSessionID()
 	cmd.Stdin = strings.NewReader(hookStdin)
 
 	if err := cmd.Run(); err != nil {

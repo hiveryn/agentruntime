@@ -51,7 +51,7 @@ func TestNormalize_NonCreatedEvents_LeaveRoleUnknown(t *testing.T) {
 	// leave PrimaryNativeID and Role unset so the ingest receiver can classify
 	// subagent events correctly using its stored (agent, callerID) → primaryNativeID map.
 	a := New(DefaultOptions())
-	for _, name := range []string{"session_status_busy_1.json", "session_idle_1.json", "tool_before_1.json", "tool_after_1.json"} {
+	for _, name := range []string{"session_status_busy_1.json", "session_status_idle_1.json", "session_idle_1.json", "tool_before_1.json", "tool_after_1.json"} {
 		ev, err := a.NormalizeEvent(context.Background(), fixture(t, name))
 		if err != nil {
 			t.Fatalf("%s: %v", name, err)
@@ -96,18 +96,29 @@ func TestNormalize_SessionCreated_Subagent(t *testing.T) {
 
 func TestNormalize_SessionStatus(t *testing.T) {
 	a := New(DefaultOptions())
-	ev, err := a.NormalizeEvent(context.Background(), fixture(t, "session_status_busy_1.json"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if ev == nil {
-		t.Fatal("expected event, got nil")
-	}
-	if ev.Status != agentruntime.StatusWorking {
-		t.Errorf("status: got %q want %q", ev.Status, agentruntime.StatusWorking)
-	}
-	if ev.NativeID != "ses_21873b6cbffeL3JOLPOFsrfKEt" {
-		t.Errorf("NativeID: got %q", ev.NativeID)
+	for _, tc := range []struct {
+		name    string
+		want    agentruntime.Status
+		fixture string
+	}{
+		{name: "busy", fixture: "session_status_busy_1.json", want: agentruntime.StatusWorking},
+		{name: "idle", fixture: "session_status_idle_1.json", want: agentruntime.StatusIdle},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ev, err := a.NormalizeEvent(context.Background(), fixture(t, tc.fixture))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if ev == nil {
+				t.Fatal("expected event, got nil")
+			}
+			if ev.Status != tc.want {
+				t.Errorf("status: got %q want %q", ev.Status, tc.want)
+			}
+			if ev.NativeID != "ses_21873b6cbffeL3JOLPOFsrfKEt" {
+				t.Errorf("NativeID: got %q", ev.NativeID)
+			}
+		})
 	}
 }
 

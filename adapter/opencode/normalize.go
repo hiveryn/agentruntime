@@ -123,7 +123,12 @@ func opencodeStatus(name string, payload map[string]any) (agentruntime.Status, b
 	case "session.created":
 		return agentruntime.StatusStarting, true
 	case "session.status":
-		return agentruntime.StatusWorking, true
+		switch getString(getMap(payload, "status"), "type") {
+		case "idle":
+			return agentruntime.StatusIdle, true
+		default:
+			return agentruntime.StatusWorking, true
+		}
 	case "tool.execute.before":
 		// OpenCode uses the "question" tool for interactive user confirmations
 		// (e.g. permission requests). Treat it as awaiting_input on the way in.
@@ -197,6 +202,18 @@ func getString(m map[string]any, key string) string {
 	}
 	s, _ := v.(string)
 	return s
+}
+
+func getMap(m map[string]any, key string) map[string]any {
+	if m == nil {
+		return nil
+	}
+	v, ok := m[key]
+	if !ok {
+		return nil
+	}
+	nested, _ := v.(map[string]any)
+	return nested
 }
 
 func emptyNil(m map[string]string) map[string]string {
