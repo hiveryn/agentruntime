@@ -140,8 +140,8 @@ func TestPrepareLaunchResumeBare(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(spec.Args) < 2 || spec.Args[0] != "resume" || spec.Args[1] != "--last" {
-		t.Fatalf("args[0:2]: %q, want [resume --last]", spec.Args)
+	if !hasArgPair(spec.Args, "resume", "--last") {
+		t.Fatalf("args missing resume --last: %q", spec.Args)
 	}
 	if spec.Env["AGENTRUNTIME_SESSION_ID"] != "session-1" {
 		t.Fatalf("AGENTRUNTIME_SESSION_ID: %q", spec.Env["AGENTRUNTIME_SESSION_ID"])
@@ -185,8 +185,8 @@ func TestPrepareLaunchResumeSpecific(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(spec.Args) < 2 || spec.Args[0] != "resume" || spec.Args[1] != "00000000-0000-4000-8000-000000000099" {
-		t.Fatalf("args[0:2]: %q, want [resume 00000000-0000-4000-8000-000000000099]", spec.Args)
+	if !hasArgPair(spec.Args, "resume", "00000000-0000-4000-8000-000000000099") {
+		t.Fatalf("args missing resume <id>: %q", spec.Args)
 	}
 }
 
@@ -205,7 +205,7 @@ func TestPrepareLaunchResumeWithPrompt(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(spec.Args) < 2 || spec.Args[0] != "resume" || spec.Args[1] != "abc-def" {
+	if !hasArgPair(spec.Args, "resume", "abc-def") {
 		t.Fatalf("resume subcommand and session id: %q", spec.Args)
 	}
 	if got := spec.Args[len(spec.Args)-1]; got != req.Prompt {

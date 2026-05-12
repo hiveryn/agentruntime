@@ -26,7 +26,8 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 		command = "codex"
 	}
 
-	args := make([]string, 0, len(req.Args)+8)
+	args := make([]string, 0, len(req.Args)+10)
+	args = append(args, "--enable", "hooks")
 	if req.Resume {
 		if req.ResumeID != "" {
 			args = append(args, "resume", req.ResumeID)
