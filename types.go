@@ -50,7 +50,7 @@ type OpenCodeAgentConfig struct {
 	Description string            `json:"description"`
 	Mode        string            `json:"mode"`
 	Prompt      string            `json:"prompt,omitempty"`
-	Permission  map[string]string `json:"permission"`
+	Permission  map[string]string `json:"permission,omitempty"`
 }
 
 type Event struct {

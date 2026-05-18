@@ -751,6 +751,9 @@ func TestPrepareLaunch_AgentConfigCoexistsWithMCPInstructionsProfile(t *testing.
 	if _, ok := cfg.Agent["cortex"]; !ok {
 		t.Error("agent entry cortex missing")
 	}
+	if strings.Contains(spec.Env["OPENCODE_CONFIG_CONTENT"], `"permission":null`) {
+		t.Fatalf("nil agent permission must be omitted, got %s", spec.Env["OPENCODE_CONFIG_CONTENT"])
+	}
 }
 
 func TestPrepareLaunch_AgentConfigPromptIndependentFromRequestPrompt(t *testing.T) {

@@ -92,7 +92,9 @@ agentruntime.HookCommand{Endpoint: "http://127.0.0.1:9000"}
   into the `agent` section of `OPENCODE_CONFIG_CONTENT`. Each key is the profile
   name; the value is an `OpenCodeAgentConfig` with `Description`, `Mode`,
   `Prompt` (agent definition prompt — independent of `StartRequest.Prompt` and
-  `StartRequest.Instructions`), and `Permission`. Ignored when nil or empty.
+  `StartRequest.Instructions`), and optional `Permission`. Ignored when nil or
+  empty; nil per-agent `Permission` values are omitted so OpenCode receives
+  `undefined`, not JSON `null`.
 - **`Resume`** — when `true`, resume an existing session instead of starting
   fresh.
 - **`ResumeID`** — native session ID to resume when `Resume` is `true`. If empty,
