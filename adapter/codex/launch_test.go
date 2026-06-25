@@ -140,8 +140,12 @@ func TestPrepareLaunchResumeBare(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !hasArgPair(spec.Args, "resume", "--last") {
-		t.Fatalf("args missing resume --last: %q", spec.Args)
+	// Bare `codex resume` opens the interactive picker; `--last` must NOT appear.
+	if !hasArg(spec.Args, "resume") {
+		t.Fatalf("args missing bare resume: %q", spec.Args)
+	}
+	if hasArg(spec.Args, "--last") {
+		t.Fatalf("bare resume must not include --last: %q", spec.Args)
 	}
 	if spec.Env["AGENTRUNTIME_SESSION_ID"] != "session-1" {
 		t.Fatalf("AGENTRUNTIME_SESSION_ID: %q", spec.Env["AGENTRUNTIME_SESSION_ID"])
@@ -149,7 +153,7 @@ func TestPrepareLaunchResumeBare(t *testing.T) {
 }
 
 func TestPrepareLaunchResumeBareSupressesPrompt(t *testing.T) {
-	// codex resume --last treats the next positional as SESSION_ID, not PROMPT.
+	// Bare `codex resume` treats the next positional as SESSION_ID, not PROMPT.
 	// A prompt passed alongside bare resume would be misread as a session ID lookup.
 	adapter := New(DefaultOptions())
 	req := agentruntime.StartRequest{
@@ -448,6 +452,15 @@ func TestPrepareLaunch_MCPTOMLSpecialChars(t *testing.T) {
 func hasArgPair(args []string, key, value string) bool {
 	for i := 0; i+1 < len(args); i++ {
 		if args[i] == key && args[i+1] == value {
+			return true
+		}
+	}
+	return false
+}
+
+func hasArg(args []string, want string) bool {
+	for _, arg := range args {
+		if arg == want {
 			return true
 		}
 	}

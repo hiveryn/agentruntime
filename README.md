@@ -108,7 +108,9 @@ agentruntime.HookCommand{Endpoint: "http://127.0.0.1:9000"}
 - **`Resume`** — when `true`, resume an existing session instead of starting
   fresh.
 - **`ResumeID`** — native session ID to resume when `Resume` is `true`. If empty,
-  resumes the most recent session.
+  the adapter performs an id-less resume — an interactive session picker where the
+  CLI supports one (Claude, Codex), otherwise continuing the most recent session
+  (OpenCode).
 
 Ordinary runtime options should be passed through `Command`, `Args`, and `Env`.
 The library only models behavior it must synthesize for portability: MCP config,
@@ -165,9 +167,13 @@ Each adapter synthesizes resume in its own native shape:
 
 | Adapter  | Bare resume (`ResumeID=""`) | Specific resume (`ResumeID=<id>`) | Prompt suppressed when |
 |----------|-----------------------------|-----------------------------------|------------------------|
-| Claude   | `--resume`                  | `--resume <id>`                   | never                  |
-| Codex    | `resume --last`             | `resume <id>`                     | bare resume only       |
-| OpenCode | `--continue`                | `--session <id>`                  | specific resume only   |
+| Claude   | `--resume` (picker)         | `--resume <id>`                   | never                  |
+| Codex    | `resume` (picker)           | `resume <id>`                     | bare resume only       |
+| OpenCode | `--continue` (last; no picker) | `--session <id>`               | specific resume only   |
+
+Bare resume opens an interactive picker for Claude and Codex. OpenCode has no
+launch-time picker, so `--continue` (resume the last session) is the closest
+fallback.
 
 In resume mode, Claude skips generating a new `--session-id`.
 `AGENTRUNTIME_SESSION_ID` is always set to `StartRequest.ID` regardless of

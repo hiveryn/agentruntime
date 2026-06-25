@@ -32,7 +32,9 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 		if req.ResumeID != "" {
 			args = append(args, "resume", req.ResumeID)
 		} else {
-			args = append(args, "resume", "--last")
+			// Bare `codex resume` opens the interactive session picker, matching the
+			// id-less resume UX of claude's `--resume`.
+			args = append(args, "resume")
 		}
 	}
 	if strings.TrimSpace(req.Instructions) != "" {
@@ -51,8 +53,9 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 
 	args = append(args, req.Args...)
 	args = append(args, "--cd", req.Workdir)
-	// For bare resume (--last), codex treats the next positional as SESSION_ID not PROMPT.
-	// Only append the prompt when starting fresh or resuming a specific session by ID.
+	// For bare resume (`resume` picker), codex treats the next positional as
+	// SESSION_ID not PROMPT. Only append the prompt when starting fresh or
+	// resuming a specific session by ID.
 	if req.Prompt != "" && (!req.Resume || req.ResumeID != "") {
 		args = append(args, req.Prompt)
 	}

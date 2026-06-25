@@ -106,6 +106,9 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 		if req.ResumeID != "" {
 			args = append(args, "--session", req.ResumeID)
 		} else {
+			// opencode has no launch-time session picker (only `--session <id>` or
+			// `--continue`). `--continue` (resume the last session) is the closest
+			// fallback for an id-less resume.
 			args = append(args, "--continue")
 		}
 	}
