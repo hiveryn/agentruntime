@@ -50,6 +50,12 @@ marker-scoped files:
 - Claude Code: `~/.claude/settings.json`
 - OpenCode: `~/.config/opencode/plugins/agentruntime-<marker>.ts`
 
+For Claude/Codex, each call removes every agentruntime-managed hook and reinstalls
+one fresh group per event, so repeated launches can never accumulate duplicates and
+already-bloated configs self-heal. Managed hooks are identified by a stable signature
+in the command string (not the human-readable `agentruntimeMarker` field), because
+Claude/Codex rewrite their settings files and may drop unknown fields.
+
 Call `RemoveSetup` when your integration is disabled, uninstalled, or changing
 markers. This is distinct from per-launch cleanup.
 

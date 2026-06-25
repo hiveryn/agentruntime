@@ -8,12 +8,19 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/hiveryn/agentruntime"
 )
 
 const markerField = "agentruntimeMarker"
+
+// managedHookSignature is a stable, agentruntime-branded token present in every
+// generated hook command (see hook.go). Codex owns and rewrites hooks.json and
+// may drop unknown fields like markerField, so detection must key on the command
+// string the agent preserves, not on a custom field it may strip.
+const managedHookSignature = "AGENTRUNTIME_SESSION_ID"
 
 var hookEvents = []string{"SessionStart", "UserPromptSubmit", "PreToolUse", "PermissionRequest", "PostToolUse", "Stop"}
 
@@ -90,12 +97,6 @@ func (a *Adapter) RemoveSetup(_ context.Context, req agentruntime.SetupRequest) 
 }
 
 func installHookCommand(root map[string]any, marker string, hook agentruntime.HookCommand) {
-	hooks, _ := root["hooks"].(map[string]any)
-	if hooks == nil {
-		hooks = map[string]any{}
-		root["hooks"] = hooks
-	}
-
 	timeout := 10
 	if hook.Timeout > 0 {
 		timeout = int(hook.Timeout / time.Second)
@@ -108,36 +109,42 @@ func installHookCommand(root map[string]any, marker string, hook agentruntime.Ho
 		statusMessage = "agentruntime status capture"
 	}
 
+	// Remove every managed hook first, then append exactly one fresh group per
+	// targeted event. This collapses any pre-existing duplicates (self-heal) and
+	// drops stale-endpoint variants in a single idempotent pass.
+	removeHookCommand(root, marker)
+
+	hooks, _ := root["hooks"].(map[string]any)
+	if hooks == nil {
+		hooks = map[string]any{}
+		root["hooks"] = hooks
+	}
+
 	for _, event := range hookEvents {
 		groups, _ := hooks[event].([]any)
-		updated := false
-		for _, group := range groups {
-			groupMap, _ := group.(map[string]any)
-			inner, _ := groupMap["hooks"].([]any)
-			for _, candidate := range inner {
-				hookMap, _ := candidate.(map[string]any)
-				if hookMap[markerField] == marker {
-					hookMap["command"] = hook.Command
-					hookMap["timeout"] = timeout
-					hookMap["statusMessage"] = statusMessage
-					updated = true
-				}
-			}
-		}
-		if !updated {
-			groups = append(groups, map[string]any{
-				"matcher": "",
-				"hooks": []any{map[string]any{
-					"type":          "command",
-					"command":       hook.Command,
-					"timeout":       timeout,
-					"statusMessage": statusMessage,
-					markerField:     marker,
-				}},
-			})
-		}
+		groups = append(groups, map[string]any{
+			"matcher": "",
+			"hooks": []any{map[string]any{
+				"type":          "command",
+				"command":       hook.Command,
+				"timeout":       timeout,
+				"statusMessage": statusMessage,
+				markerField:     marker,
+			}},
+		})
 		hooks[event] = groups
 	}
+}
+
+// isManagedHook reports whether a hook entry belongs to this agentruntime marker.
+// It matches the legacy marker field when present, and falls back to the command
+// signature when the agent has stripped the field (the duplicate-accumulation bug).
+func isManagedHook(hookMap map[string]any, marker string) bool {
+	if m, ok := hookMap[markerField].(string); ok && m != "" {
+		return m == marker // explicit marker: only ours if it matches
+	}
+	cmd, _ := hookMap["command"].(string)
+	return strings.Contains(cmd, managedHookSignature) // stripped marker: fall back to signature
 }
 
 func removeHookCommand(root map[string]any, marker string) {
@@ -168,7 +175,7 @@ func removeHookCommand(root map[string]any, marker string) {
 			keptHooks := make([]any, 0, len(inner))
 			for _, candidate := range inner {
 				hookMap, ok := candidate.(map[string]any)
-				if !ok || hookMap[markerField] != marker {
+				if !ok || !isManagedHook(hookMap, marker) {
 					keptHooks = append(keptHooks, candidate)
 				}
 			}

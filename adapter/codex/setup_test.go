@@ -2,6 +2,7 @@ package codex
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -63,6 +64,91 @@ func TestEnsureSetupInstallsAndUpdatesMarkerScopedHooks(t *testing.T) {
 	if strings.Contains(string(data), "9000") || !strings.Contains(string(data), "9001") {
 		t.Fatalf("unexpected command contents\n%s", data)
 	}
+}
+
+// TestEnsureSetupCollapsesStrippedMarkerDuplicates simulates the real-world bug:
+// Codex rewrites hooks.json and drops the agentruntimeMarker field, so prior runs
+// left many duplicate hook groups carrying the real signature-bearing command but
+// no marker. EnsureSetup must self-heal them down to one group per event.
+func TestEnsureSetupCollapsesStrippedMarkerDuplicates(t *testing.T) {
+	adapter := New(DefaultOptions())
+	root := t.TempDir()
+	path := filepath.Join(root, "hooks.json")
+
+	hook := HookCommand("http://127.0.0.1:4201/internal/agentruntime")
+	if !strings.Contains(hook.Command, managedHookSignature) {
+		t.Fatalf("expected generated command to contain signature %q", managedHookSignature)
+	}
+
+	// Seed 50 duplicate groups per event, each WITHOUT a marker field (stripped),
+	// mimicking a bloated config that grew unbounded across launches.
+	hooks := map[string]any{}
+	for _, event := range hookEvents {
+		groups := make([]any, 0, 50)
+		for range 50 {
+			groups = append(groups, map[string]any{
+				"matcher": "",
+				"hooks": []any{map[string]any{
+					"type":          "command",
+					"command":       hook.Command,
+					"timeout":       10,
+					"statusMessage": "agentruntime codex hook",
+				}},
+			})
+		}
+		hooks[event] = groups
+	}
+	seed, err := json.Marshal(map[string]any{"hooks": hooks})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, seed, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := adapter.EnsureSetup(context.Background(), agentruntime.SetupRequest{
+		Marker:     "hiveryn-daemon",
+		ConfigRoot: root,
+		Hook:       hook,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.Changed {
+		t.Fatal("expected collapsing duplicates to change hooks file")
+	}
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := countHookEntries(t, data); got != len(hookEvents) {
+		t.Fatalf("expected exactly one hook entry per event (%d), got %d\n%s", len(hookEvents), got, data)
+	}
+	if strings.Count(string(data), markerField) != len(hookEvents) {
+		t.Fatalf("expected the fresh hooks to carry the marker field\n%s", data)
+	}
+}
+
+// countHookEntries totals the individual command entries across all events in a
+// hooks file, so duplicate groups can be detected regardless of marker.
+func countHookEntries(t *testing.T, data []byte) int {
+	t.Helper()
+	var root struct {
+		Hooks map[string][]struct {
+			Hooks []map[string]any `json:"hooks"`
+		} `json:"hooks"`
+	}
+	if err := json.Unmarshal(data, &root); err != nil {
+		t.Fatal(err)
+	}
+	total := 0
+	for _, groups := range root.Hooks {
+		for _, g := range groups {
+			total += len(g.Hooks)
+		}
+	}
+	return total
 }
 
 func TestRemoveSetupOnlyRemovesMatchingMarker(t *testing.T) {
