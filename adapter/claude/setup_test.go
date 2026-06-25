@@ -34,7 +34,7 @@ func TestEnsureSetupInstallsAndUpdatesMarkerScopedHooks(t *testing.T) {
 		t.Fatal("expected initial setup to change settings file")
 	}
 
-	path := filepath.Join(root, ".claude", "settings.json")
+	path := filepath.Join(root, "settings.json")
 	data, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
@@ -73,7 +73,7 @@ func TestEnsureSetupInstallsAndUpdatesMarkerScopedHooks(t *testing.T) {
 func TestEnsureSetupCollapsesStrippedMarkerDuplicates(t *testing.T) {
 	adapter := New(DefaultOptions())
 	root := t.TempDir()
-	path := filepath.Join(root, ".claude", "settings.json")
+	path := filepath.Join(root, "settings.json")
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -157,7 +157,7 @@ func countHookEntries(t *testing.T, data []byte) int {
 func TestRemoveSetupOnlyRemovesMatchingMarker(t *testing.T) {
 	adapter := New(DefaultOptions())
 	root := t.TempDir()
-	path := filepath.Join(root, ".claude", "settings.json")
+	path := filepath.Join(root, "settings.json")
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		t.Fatal(err)
 	}

@@ -19,3 +19,9 @@ func DefaultOptions() Options {
 func (a *Adapter) Agent() agentruntime.AgentKind {
 	return agentruntime.AgentCodex
 }
+
+// ConfigRoot returns the variant's CODEX_HOME, which Codex treats as the
+// .codex-equivalent directory.
+func (a *Adapter) ConfigRoot(env map[string]string) string {
+	return env["CODEX_HOME"]
+}

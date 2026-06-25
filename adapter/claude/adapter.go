@@ -31,6 +31,12 @@ func (a *Adapter) Agent() agentruntime.AgentKind {
 	return agentruntime.AgentClaude
 }
 
+// ConfigRoot returns the variant's CLAUDE_CONFIG_DIR, which Claude treats as
+// the .claude-equivalent directory (settings.json lives directly under it).
+func (a *Adapter) ConfigRoot(env map[string]string) string {
+	return env["CLAUDE_CONFIG_DIR"]
+}
+
 func newSessionID() (string, error) {
 	var raw [16]byte
 	if _, err := rand.Read(raw[:]); err != nil {

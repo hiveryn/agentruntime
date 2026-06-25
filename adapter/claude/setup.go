@@ -213,7 +213,7 @@ func removeHookCommand(root map[string]any, marker string) {
 
 func settingsPath(configRoot string) (string, error) {
 	if configRoot != "" {
-		return filepath.Join(configRoot, ".claude", "settings.json"), nil
+		return filepath.Join(configRoot, "settings.json"), nil
 	}
 	home, err := os.UserHomeDir()
 	if err != nil {

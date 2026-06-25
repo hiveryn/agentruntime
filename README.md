@@ -46,9 +46,13 @@ persistence, auth, product workflow, and any UI event stream.
 `EnsureSetup` is idempotent for the same marker and hook target. It writes
 marker-scoped files:
 
-- Codex: `~/.codex/hooks.json`
-- Claude Code: `~/.claude/settings.json`
+- Codex: `$CODEX_HOME/hooks.json` (default `~/.codex/hooks.json`)
+- Claude Code: `$CLAUDE_CONFIG_DIR/settings.json` (default `~/.claude/settings.json`)
 - OpenCode: `~/.config/opencode/plugins/agentruntime-<marker>.ts`
+
+Each adapter resolves its config directory from the variant environment via
+`Adapter.ConfigRoot(env)`, so a variant launched with a custom `CLAUDE_CONFIG_DIR`
+or `CODEX_HOME` gets its hooks installed in the right place.
 
 For Claude/Codex, each call removes every agentruntime-managed hook and reinstalls
 one fresh group per event, so repeated launches can never accumulate duplicates and
