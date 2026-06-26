@@ -58,7 +58,13 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 		args = append(args, req.Prompt)
 	}
 	if req.Model != "" {
+		if a, ok := agentruntime.FindManagedArg(req.Args, "--model"); ok {
+			return agentruntime.LaunchSpec{}, fmt.Errorf("argument %q conflicts with managed model %q; remove it from args", a, req.Model)
+		}
 		args = append(args, "--model", req.Model)
+	}
+	if err := appendClaudePermissionArgs(&args, req); err != nil {
+		return agentruntime.LaunchSpec{}, err
 	}
 	if strings.TrimSpace(req.Instructions) != "" {
 		flag := "--system-prompt"
@@ -107,6 +113,33 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 		Workdir:      req.Workdir,
 		CleanupPaths: cleanupPaths,
 	}, nil
+}
+
+// appendClaudePermissionArgs translates the first-class Yolo and Mode fields
+// into claude's permission flags, rejecting raw args that conflict with the
+// flags it emits. Plan and bypass are both --permission-mode values on claude,
+// so combining plan with yolo requires --allow-dangerously-skip-permissions
+// (make bypass available) rather than --dangerously-skip-permissions (default on).
+func appendClaudePermissionArgs(args *[]string, req agentruntime.StartRequest) error {
+	plan, err := req.Mode.IsPlan()
+	if err != nil {
+		return err
+	}
+	if !req.Yolo && !plan {
+		return nil
+	}
+	if a, ok := agentruntime.FindManagedArg(req.Args, "--permission-mode", "--dangerously-skip-permissions", "--allow-dangerously-skip-permissions"); ok {
+		return fmt.Errorf("argument %q conflicts with managed yolo/mode fields; remove it from args", a)
+	}
+	switch {
+	case req.Yolo && plan:
+		*args = append(*args, "--allow-dangerously-skip-permissions", "--permission-mode", "plan")
+	case req.Yolo && !plan:
+		*args = append(*args, "--dangerously-skip-permissions")
+	case !req.Yolo && plan:
+		*args = append(*args, "--permission-mode", "plan")
+	}
+	return nil
 }
 
 func writeMCPConfig(servers []agentruntime.MCPServerConfig) (string, error) {

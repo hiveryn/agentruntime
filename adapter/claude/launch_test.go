@@ -155,6 +155,98 @@ func TestPrepareLaunchNoModel(t *testing.T) {
 	}
 }
 
+func TestPrepareLaunchYoloAndMode(t *testing.T) {
+	mk := func() *Adapter {
+		return New(Options{NewSessionID: func() (string, error) { return "00000000-0000-4000-8000-000000000001", nil }})
+	}
+	hasArg := func(args []string, want string) bool {
+		for _, a := range args {
+			if a == want {
+				return true
+			}
+		}
+		return false
+	}
+
+	// yolo only -> --dangerously-skip-permissions
+	spec, err := mk().PrepareLaunch(context.Background(), agentruntime.StartRequest{
+		ID: "y", Agent: agentruntime.AgentClaude, Workdir: "/tmp", Yolo: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasArg(spec.Args, "--dangerously-skip-permissions") {
+		t.Fatalf("yolo: missing --dangerously-skip-permissions: %q", spec.Args)
+	}
+	if hasArg(spec.Args, "--permission-mode") {
+		t.Fatalf("yolo build: unexpected --permission-mode: %q", spec.Args)
+	}
+
+	// plan only -> --permission-mode plan
+	spec, err = mk().PrepareLaunch(context.Background(), agentruntime.StartRequest{
+		ID: "p", Agent: agentruntime.AgentClaude, Workdir: "/tmp", Mode: agentruntime.ModePlan,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasArgPair(spec.Args, "--permission-mode", "plan") {
+		t.Fatalf("plan: missing --permission-mode plan: %q", spec.Args)
+	}
+	if hasArg(spec.Args, "--dangerously-skip-permissions") {
+		t.Fatalf("plan (no yolo): unexpected skip flag: %q", spec.Args)
+	}
+
+	// yolo + plan -> --allow-dangerously-skip-permissions + --permission-mode plan
+	spec, err = mk().PrepareLaunch(context.Background(), agentruntime.StartRequest{
+		ID: "yp", Agent: agentruntime.AgentClaude, Workdir: "/tmp", Yolo: true, Mode: agentruntime.ModePlan,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasArg(spec.Args, "--allow-dangerously-skip-permissions") || !hasArgPair(spec.Args, "--permission-mode", "plan") {
+		t.Fatalf("yolo+plan: wrong flags: %q", spec.Args)
+	}
+	if hasArg(spec.Args, "--dangerously-skip-permissions") {
+		t.Fatalf("yolo+plan: must use allow- variant, not default-on: %q", spec.Args)
+	}
+
+	// default (no yolo, no mode) -> nothing
+	spec, err = mk().PrepareLaunch(context.Background(), agentruntime.StartRequest{
+		ID: "d", Agent: agentruntime.AgentClaude, Workdir: "/tmp",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if hasArg(spec.Args, "--permission-mode") || hasArg(spec.Args, "--dangerously-skip-permissions") {
+		t.Fatalf("default: unexpected permission flags: %q", spec.Args)
+	}
+}
+
+func TestPrepareLaunchConditionalReject(t *testing.T) {
+	adapter := New(Options{NewSessionID: func() (string, error) { return "00000000-0000-4000-8000-000000000001", nil }})
+	cases := []struct {
+		name string
+		req  agentruntime.StartRequest
+	}{
+		{"model+--model", agentruntime.StartRequest{ID: "x", Agent: agentruntime.AgentClaude, Workdir: "/tmp", Model: "claude-opus-4-8", Args: []string{"--model", "other"}}},
+		{"yolo+--permission-mode", agentruntime.StartRequest{ID: "x", Agent: agentruntime.AgentClaude, Workdir: "/tmp", Yolo: true, Args: []string{"--permission-mode", "acceptEdits"}}},
+		{"plan+--permission-mode", agentruntime.StartRequest{ID: "x", Agent: agentruntime.AgentClaude, Workdir: "/tmp", Mode: agentruntime.ModePlan, Args: []string{"--permission-mode=plan"}}},
+		{"badmode", agentruntime.StartRequest{ID: "x", Agent: agentruntime.AgentClaude, Workdir: "/tmp", Mode: agentruntime.Mode("wat")}},
+	}
+	for _, tc := range cases {
+		if _, err := adapter.PrepareLaunch(context.Background(), tc.req); err == nil {
+			t.Fatalf("%s: expected error, got nil", tc.name)
+		}
+	}
+
+	// Escape hatch: --permission-mode allowed when neither yolo nor mode set.
+	if _, err := adapter.PrepareLaunch(context.Background(), agentruntime.StartRequest{
+		ID: "ok", Agent: agentruntime.AgentClaude, Workdir: "/tmp", Args: []string{"--permission-mode", "acceptEdits"},
+	}); err != nil {
+		t.Fatalf("escape hatch should allow --permission-mode when unset: %v", err)
+	}
+}
+
 func TestPrepareLaunchResumeBare(t *testing.T) {
 	called := false
 	adapter := New(Options{

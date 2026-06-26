@@ -52,6 +52,67 @@ func TestPrepareLaunch_NoModel(t *testing.T) {
 	}
 }
 
+func TestPrepareLaunch_YoloAndMode(t *testing.T) {
+	a := New(DefaultOptions())
+
+	// mode plan -> --agent plan
+	req := baseReq()
+	req.Mode = agentruntime.ModePlan
+	spec, err := a.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasArgPair(spec.Args, "--agent", "plan") {
+		t.Fatalf("plan: missing --agent plan: %q", spec.Args)
+	}
+
+	// yolo -> config permission: allow, no CLI flag
+	req = baseReq()
+	req.Yolo = true
+	spec, err = a.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cfg ocConfig
+	if err := json.Unmarshal([]byte(spec.Env["OPENCODE_CONFIG_CONTENT"]), &cfg); err != nil {
+		t.Fatalf("parse config: %v", err)
+	}
+	if cfg.Permission != "allow" {
+		t.Fatalf("yolo: expected permission allow, got %v", cfg.Permission)
+	}
+
+	// build mode default -> no --agent
+	req = baseReq()
+	spec, err = a.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, arg := range spec.Args {
+		if arg == "--agent" {
+			t.Fatalf("default: unexpected --agent: %q", spec.Args)
+		}
+	}
+
+	// conditional rejects
+	rejects := []agentruntime.StartRequest{
+		func() agentruntime.StartRequest { r := baseReq(); r.Mode = agentruntime.ModePlan; r.Args = []string{"--agent", "build"}; return r }(),
+		func() agentruntime.StartRequest { r := baseReq(); r.Model = "x/y"; r.Args = []string{"--model", "a/b"}; return r }(),
+		func() agentruntime.StartRequest { r := baseReq(); r.Mode = agentruntime.Mode("nope"); return r }(),
+	}
+	for i, r := range rejects {
+		if _, err := a.PrepareLaunch(context.Background(), r); err == nil {
+			t.Fatalf("reject case %d: expected error", i)
+		}
+	}
+
+	// escape hatch: --agent allowed when mode unset
+	req = baseReq()
+	req.Args = []string{"--agent", "custom"}
+	if _, err := a.PrepareLaunch(context.Background(), req); err != nil {
+		t.Fatalf("escape hatch: --agent should be allowed when mode unset: %v", err)
+	}
+}
+
 func TestPrepareLaunch_Basic(t *testing.T) {
 	a := New(DefaultOptions())
 	spec, err := a.PrepareLaunch(context.Background(), baseReq())

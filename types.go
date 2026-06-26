@@ -10,6 +10,14 @@ const (
 	AgentOpenCode AgentKind = "opencode"
 )
 
+// Mode is the execution posture of a session.
+type Mode string
+
+const (
+	ModeBuild Mode = "build" // Full execution (default). Empty Mode is treated as build.
+	ModePlan  Mode = "plan"  // Read-only planning/analysis.
+)
+
 type Status string
 
 const (
@@ -38,6 +46,8 @@ type StartRequest struct {
 	Workdir             string
 	Prompt              string
 	Model               string // Agent model selector, translated to the agent-specific flag (e.g. --model). Agent-specific value form (claude/codex: bare id; opencode: provider/model).
+	Yolo                bool   // Full autonomy: skip approvals/permission prompts. Translated to the agent-specific flag (claude --dangerously-skip-permissions, codex --dangerously-bypass-approvals-and-sandbox, opencode permission:allow).
+	Mode                Mode   // Execution mode (build or plan). Empty defaults to build. Plan is unsupported by codex.
 	Instructions        string
 	MCPServers          []MCPServerConfig
 	OpenCodeAgentConfig map[string]OpenCodeAgentConfig // OpenCode agent profile definitions merged into OPENCODE_CONFIG_CONTENT

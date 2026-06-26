@@ -14,6 +14,7 @@ type ocConfig struct {
 	MCP          map[string]ocMCPServer  `json:"mcp,omitempty"`
 	Instructions []string                `json:"instructions,omitempty"`
 	Agent        map[string]ocAgentEntry `json:"agent,omitempty"`
+	Permission   any                     `json:"permission,omitempty"`
 }
 
 type ocAgentEntry struct {
@@ -96,6 +97,12 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 		}
 	}
 
+	// opencode has no permission-bypass CLI flag; full autonomy is expressed in
+	// config. There is no raw arg to conflict with, so nothing to reject here.
+	if req.Yolo {
+		cfg.Permission = "allow"
+	}
+
 	configJSON, err := json.Marshal(cfg)
 	if err != nil {
 		return agentruntime.LaunchSpec{}, fmt.Errorf("marshal opencode config: %w", err)
@@ -116,7 +123,26 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 		args = append(args, "--prompt", req.Prompt)
 	}
 	if req.Model != "" {
+		if a, ok := agentruntime.FindManagedArg(req.Args, "--model", "-m"); ok {
+			return agentruntime.LaunchSpec{}, fmt.Errorf("argument %q conflicts with managed model %q; remove it from args", a, req.Model)
+		}
 		args = append(args, "--model", req.Model)
+	}
+	// Mode maps to opencode's built-in agents: plan selects the read-only `plan`
+	// agent via --agent; build is the default agent (no flag). When mode is set,
+	// --agent in raw args is rejected (it also collides with the architect-agent
+	// injection the daemon manages).
+	plan, err := req.Mode.IsPlan()
+	if err != nil {
+		return agentruntime.LaunchSpec{}, err
+	}
+	if req.Mode != "" {
+		if a, ok := agentruntime.FindManagedArg(req.Args, "--agent"); ok {
+			return agentruntime.LaunchSpec{}, fmt.Errorf("argument %q conflicts with managed mode field; remove it from args", a)
+		}
+	}
+	if plan {
+		args = append(args, "--agent", "plan")
 	}
 	args = append(args, req.Args...)
 

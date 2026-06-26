@@ -485,6 +485,55 @@ func TestPrepareLaunchNoModel(t *testing.T) {
 	}
 }
 
+func TestPrepareLaunchYoloAndMode(t *testing.T) {
+	adapter := New(DefaultOptions())
+
+	// yolo -> bypass flag
+	spec, err := adapter.PrepareLaunch(context.Background(), agentruntime.StartRequest{
+		ID: "y", Agent: agentruntime.AgentCodex, Workdir: "/tmp", Yolo: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasArg(spec.Args, "--dangerously-bypass-approvals-and-sandbox") {
+		t.Fatalf("yolo: missing bypass flag: %q", spec.Args)
+	}
+
+	// build mode ok, no flags
+	if _, err := adapter.PrepareLaunch(context.Background(), agentruntime.StartRequest{
+		ID: "b", Agent: agentruntime.AgentCodex, Workdir: "/tmp", Mode: agentruntime.ModeBuild,
+	}); err != nil {
+		t.Fatalf("build mode should be supported: %v", err)
+	}
+
+	// plan mode -> rejected (codex has no plan)
+	if _, err := adapter.PrepareLaunch(context.Background(), agentruntime.StartRequest{
+		ID: "p", Agent: agentruntime.AgentCodex, Workdir: "/tmp", Mode: agentruntime.ModePlan,
+	}); err == nil {
+		t.Fatal("plan mode must be rejected for codex")
+	}
+
+	// conditional rejects
+	rejects := []agentruntime.StartRequest{
+		{ID: "x", Agent: agentruntime.AgentCodex, Workdir: "/tmp", Yolo: true, Args: []string{"--sandbox", "read-only"}},
+		{ID: "x", Agent: agentruntime.AgentCodex, Workdir: "/tmp", Yolo: true, Args: []string{"-s", "read-only"}},
+		{ID: "x", Agent: agentruntime.AgentCodex, Workdir: "/tmp", Yolo: true, Args: []string{"--dangerously-bypass-approvals-and-sandbox"}},
+		{ID: "x", Agent: agentruntime.AgentCodex, Workdir: "/tmp", Model: "gpt-5.4", Args: []string{"-m", "other"}},
+	}
+	for i, r := range rejects {
+		if _, err := adapter.PrepareLaunch(context.Background(), r); err == nil {
+			t.Fatalf("reject case %d: expected error", i)
+		}
+	}
+
+	// escape hatch: --sandbox allowed when yolo not set
+	if _, err := adapter.PrepareLaunch(context.Background(), agentruntime.StartRequest{
+		ID: "ok", Agent: agentruntime.AgentCodex, Workdir: "/tmp", Args: []string{"--sandbox", "workspace-write"},
+	}); err != nil {
+		t.Fatalf("escape hatch: --sandbox should be allowed when yolo unset: %v", err)
+	}
+}
+
 func hasArgPair(args []string, key, value string) bool {
 	for i := 0; i+1 < len(args); i++ {
 		if args[i] == key && args[i+1] == value {

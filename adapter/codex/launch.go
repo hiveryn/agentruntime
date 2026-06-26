@@ -38,7 +38,13 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 		}
 	}
 	if req.Model != "" {
+		if a, ok := agentruntime.FindManagedArg(req.Args, "--model", "-m"); ok {
+			return agentruntime.LaunchSpec{}, fmt.Errorf("argument %q conflicts with managed model %q; remove it from args", a, req.Model)
+		}
 		args = append(args, "--model", req.Model)
+	}
+	if err := appendCodexPermissionArgs(&args, req); err != nil {
+		return agentruntime.LaunchSpec{}, err
 	}
 	if strings.TrimSpace(req.Instructions) != "" {
 		// Keep durable session/role instructions additive by injecting them as a
@@ -77,6 +83,30 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 		Env:     env,
 		Workdir: req.Workdir,
 	}, nil
+}
+
+// appendCodexPermissionArgs translates Yolo into codex's combined bypass flag.
+// Codex has no plan mode, so mode: plan is rejected at launch. When yolo is set,
+// the bypass flag plus its conflicting fine-grained flags (--sandbox,
+// --ask-for-approval) are rejected in raw args.
+func appendCodexPermissionArgs(args *[]string, req agentruntime.StartRequest) error {
+	switch req.Mode {
+	case "", agentruntime.ModeBuild:
+		// supported
+	case agentruntime.ModePlan:
+		return fmt.Errorf("mode %q is not supported by agent codex", req.Mode)
+	default:
+		return fmt.Errorf("unsupported mode %q (want %q)", req.Mode, agentruntime.ModeBuild)
+	}
+	if !req.Yolo {
+		return nil
+	}
+	if a, ok := agentruntime.FindManagedArg(req.Args,
+		"--dangerously-bypass-approvals-and-sandbox", "--sandbox", "-s", "--ask-for-approval", "-a"); ok {
+		return fmt.Errorf("argument %q conflicts with managed yolo field; remove it from args", a)
+	}
+	*args = append(*args, "--dangerously-bypass-approvals-and-sandbox")
+	return nil
 }
 
 func mcpConfigArgs(server agentruntime.MCPServerConfig) ([]string, error) {
