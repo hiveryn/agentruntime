@@ -113,6 +113,48 @@ func TestPrepareLaunchHTTPMCPAndAppendInstructions(t *testing.T) {
 	}
 }
 
+func TestPrepareLaunchModel(t *testing.T) {
+	adapter := New(Options{
+		NewSessionID: func() (string, error) { return "00000000-0000-4000-8000-000000000001", nil },
+	})
+	req := agentruntime.StartRequest{
+		ID:      "hiv-claude-model",
+		Agent:   agentruntime.AgentClaude,
+		Workdir: "/tmp/work",
+		Prompt:  "Hello.",
+		Model:   "claude-opus-4-8",
+	}
+
+	spec, err := adapter.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasArgPair(spec.Args, "--model", "claude-opus-4-8") {
+		t.Fatalf("args missing --model pair: %q", spec.Args)
+	}
+}
+
+func TestPrepareLaunchNoModel(t *testing.T) {
+	adapter := New(Options{
+		NewSessionID: func() (string, error) { return "00000000-0000-4000-8000-000000000001", nil },
+	})
+	req := agentruntime.StartRequest{
+		ID:      "hiv-claude-nomodel",
+		Agent:   agentruntime.AgentClaude,
+		Workdir: "/tmp/work",
+	}
+
+	spec, err := adapter.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, arg := range spec.Args {
+		if arg == "--model" {
+			t.Fatalf("--model must not appear when Model is empty: %q", spec.Args)
+		}
+	}
+}
+
 func TestPrepareLaunchResumeBare(t *testing.T) {
 	called := false
 	adapter := New(Options{

@@ -57,6 +57,9 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 	if req.Prompt != "" {
 		args = append(args, req.Prompt)
 	}
+	if req.Model != "" {
+		args = append(args, "--model", req.Model)
+	}
 	if strings.TrimSpace(req.Instructions) != "" {
 		flag := "--system-prompt"
 		if a.options.AppendInstructions {

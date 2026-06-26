@@ -26,6 +26,32 @@ func hasArgPair(args []string, flag, value string) bool {
 	return false
 }
 
+func TestPrepareLaunch_Model(t *testing.T) {
+	a := New(DefaultOptions())
+	req := baseReq()
+	req.Model = "deepseek/deepseek-v4-flash"
+	spec, err := a.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasArgPair(spec.Args, "--model", "deepseek/deepseek-v4-flash") {
+		t.Fatalf("args missing --model pair: %q", spec.Args)
+	}
+}
+
+func TestPrepareLaunch_NoModel(t *testing.T) {
+	a := New(DefaultOptions())
+	spec, err := a.PrepareLaunch(context.Background(), baseReq())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, arg := range spec.Args {
+		if arg == "--model" {
+			t.Fatalf("--model must not appear when Model is empty: %q", spec.Args)
+		}
+	}
+}
+
 func TestPrepareLaunch_Basic(t *testing.T) {
 	a := New(DefaultOptions())
 	spec, err := a.PrepareLaunch(context.Background(), baseReq())

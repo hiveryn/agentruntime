@@ -37,6 +37,9 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 			args = append(args, "resume")
 		}
 	}
+	if req.Model != "" {
+		args = append(args, "--model", req.Model)
+	}
 	if strings.TrimSpace(req.Instructions) != "" {
 		// Keep durable session/role instructions additive by injecting them as a
 		// separate developer message instead of replacing Codex base instructions.

@@ -37,6 +37,7 @@ type StartRequest struct {
 	Env                 map[string]string
 	Workdir             string
 	Prompt              string
+	Model               string // Agent model selector, translated to the agent-specific flag (e.g. --model). Agent-specific value form (claude/codex: bare id; opencode: provider/model).
 	Instructions        string
 	MCPServers          []MCPServerConfig
 	OpenCodeAgentConfig map[string]OpenCodeAgentConfig // OpenCode agent profile definitions merged into OPENCODE_CONFIG_CONTENT

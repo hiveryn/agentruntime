@@ -115,6 +115,9 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 	if req.Prompt != "" && (!req.Resume || req.ResumeID == "") {
 		args = append(args, "--prompt", req.Prompt)
 	}
+	if req.Model != "" {
+		args = append(args, "--model", req.Model)
+	}
 	args = append(args, req.Args...)
 
 	if v, ok := req.Env["AGENTRUNTIME_SESSION_ID"]; ok && v != "" && v != req.ID {

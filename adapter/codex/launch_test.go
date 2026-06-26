@@ -449,6 +449,42 @@ func TestPrepareLaunch_MCPTOMLSpecialChars(t *testing.T) {
 	}
 }
 
+func TestPrepareLaunchModel(t *testing.T) {
+	adapter := New(DefaultOptions())
+	req := agentruntime.StartRequest{
+		ID:      "session-model",
+		Agent:   agentruntime.AgentCodex,
+		Workdir: "/tmp/work",
+		Prompt:  "Hello.",
+		Model:   "gpt-5.4-mini",
+	}
+
+	spec, err := adapter.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasArgPair(spec.Args, "--model", "gpt-5.4-mini") {
+		t.Fatalf("args missing --model pair: %q", spec.Args)
+	}
+}
+
+func TestPrepareLaunchNoModel(t *testing.T) {
+	adapter := New(DefaultOptions())
+	req := agentruntime.StartRequest{
+		ID:      "session-nomodel",
+		Agent:   agentruntime.AgentCodex,
+		Workdir: "/tmp/work",
+	}
+
+	spec, err := adapter.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if hasArg(spec.Args, "--model") {
+		t.Fatalf("--model must not appear when Model is empty: %q", spec.Args)
+	}
+}
+
 func hasArgPair(args []string, key, value string) bool {
 	for i := 0; i+1 < len(args); i++ {
 		if args[i] == key && args[i+1] == value {
