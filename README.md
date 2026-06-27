@@ -223,9 +223,8 @@ usage, err := adapter.ParseUsage(ctx, path)
 
 `Usage` reports tokens and the resolved model id only — dollar cost is out of
 scope; multiply by your own price table. `LocateTranscript` is the primary
-path-discovery API (it does not depend on the live event stream). Claude and
-Codex implement both; OpenCode returns `ErrUsageNotImplemented` until its own
-ticket lands. `LaunchSpec.NativeSessionID` is populated pre-launch for Claude
+path-discovery API (it does not depend on the live event stream). Claude, Codex,
+and OpenCode implement both. `LaunchSpec.NativeSessionID` is populated pre-launch for Claude
 (it mints its `--session-id` UUID in `PrepareLaunch`); Codex/OpenCode mint ids at
 runtime, so it is empty for them pre-launch — Codex usage is located from the
 session id on `Event.NativeID` instead.
@@ -237,6 +236,18 @@ event (last-event-wins, not summed). Codex's `input_tokens` includes cached and
 `output_tokens` includes reasoning, so usage is normalized to match the struct's
 semantics: `InputTokens = input − cached`, `OutputTokens = output`,
 `CacheReadTokens = cached`, `CacheWriteTokens = 0`.
+
+OpenCode normalization notes: opencode 1.17.x persists all token usage in a single
+SQLite database (`$XDG_DATA_HOME/opencode/opencode.db`, default
+`~/.local/share/opencode/opencode.db`) — there is no per-session transcript file.
+`LocateTranscript` therefore returns an opaque handle `"<dbPath>::<sessionID>"`
+that `ParseUsage` decodes; consumers pass it straight through (this needs the
+SQLite-backed `modernc.org/sqlite` driver, the module's only external dependency).
+Usage is **summed** across the session's assistant messages (contrast Codex's
+last-wins). Opencode's on-disk token fields are already exclusive — `input`
+excludes cache and `output` excludes reasoning — so no subtraction is needed:
+`InputTokens = Σ input`, `OutputTokens = Σ (output + reasoning)` (reasoning folded
+in), `CacheReadTokens = Σ cache.read`, `CacheWriteTokens = Σ cache.write`.
 
 ## Examples
 

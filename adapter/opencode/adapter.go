@@ -1,8 +1,6 @@
 package opencode
 
 import (
-	"context"
-
 	"github.com/hiveryn/agentruntime"
 )
 
@@ -24,15 +22,7 @@ func New(opts Options) *Adapter { return &Adapter{options: opts} }
 func (a *Adapter) Agent() agentruntime.AgentKind { return agentruntime.AgentOpenCode }
 
 // ConfigRoot returns "" — opencode resolves its plugin directory from
-// XDG_CONFIG_HOME / the home directory rather than a variant env var.
+// XDG_CONFIG_HOME / the home directory rather than a variant env var. Usage
+// accounting (LocateTranscript/ParseUsage, in usage.go) resolves opencode's XDG
+// data dir separately, since the database lives there, not under the config root.
 func (a *Adapter) ConfigRoot(map[string]string) string { return "" }
-
-// LocateTranscript is not yet implemented for opencode (see its own ticket).
-func (a *Adapter) LocateTranscript(context.Context, agentruntime.LocateRequest) (string, error) {
-	return "", agentruntime.ErrUsageNotImplemented
-}
-
-// ParseUsage is not yet implemented for opencode (see its own ticket).
-func (a *Adapter) ParseUsage(context.Context, string) (agentruntime.Usage, error) {
-	return agentruntime.Usage{}, agentruntime.ErrUsageNotImplemented
-}
