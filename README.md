@@ -223,12 +223,20 @@ usage, err := adapter.ParseUsage(ctx, path)
 
 `Usage` reports tokens and the resolved model id only — dollar cost is out of
 scope; multiply by your own price table. `LocateTranscript` is the primary
-path-discovery API (it does not depend on the live event stream). Currently only
-the Claude adapter implements both; Codex and OpenCode return
-`ErrUsageNotImplemented` until their own tickets land. `LaunchSpec.NativeSessionID`
-is populated pre-launch for Claude (it mints its `--session-id` UUID in
-`PrepareLaunch`); Codex/OpenCode mint ids at runtime, so it is empty for them
-pre-launch.
+path-discovery API (it does not depend on the live event stream). Claude and
+Codex implement both; OpenCode returns `ErrUsageNotImplemented` until its own
+ticket lands. `LaunchSpec.NativeSessionID` is populated pre-launch for Claude
+(it mints its `--session-id` UUID in `PrepareLaunch`); Codex/OpenCode mint ids at
+runtime, so it is empty for them pre-launch — Codex usage is located from the
+session id on `Event.NativeID` instead.
+
+Codex normalization notes: rollouts live date-bucketed under
+`$CODEX_HOME/sessions/`, so `LocateTranscript` globs for `rollout-…-<id>.jsonl`
+rather than building a fixed path. Token totals are cumulative per `token_count`
+event (last-event-wins, not summed). Codex's `input_tokens` includes cached and
+`output_tokens` includes reasoning, so usage is normalized to match the struct's
+semantics: `InputTokens = input − cached`, `OutputTokens = output`,
+`CacheReadTokens = cached`, `CacheWriteTokens = 0`.
 
 ## Examples
 

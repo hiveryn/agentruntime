@@ -1,0 +1,8 @@
+{"timestamp":"2026-06-11T11:04:14.646Z","type":"session_meta","payload":{"id":"019eb65a-a50a-7353-b9ec-88fd2de2d323","timestamp":"2026-06-11T11:04:14.390Z","cwd":"/Users/dev/proj","originator":"codex-tui","cli_version":"0.137.0","model_provider":"openai","base_instructions":{"text":"You are Codex."}}}
+{"timestamp":"2026-06-11T11:04:16.781Z","type":"turn_context","payload":{"turn_id":"019eb65a-a611-7d50-abe3-fb4d914035e3","cwd":"/Users/dev/proj","current_date":"2026-06-11","model":"gpt-5.5","reasoning_effort":"medium"}}
+{"timestamp":"2026-06-11T11:04:17.000Z","type":"event_msg","payload":{"type":"user_message","message":"hello"}}
+{"timestamp":"2026-06-11T11:04:20.000Z","type":"event_msg","payload":{"type":"agent_message","message":"hi there"}}
+{"timestamp":"2026-06-11T11:04:21.000Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":100,"cached_input_tokens":60,"output_tokens":10,"reasoning_output_tokens":3,"total_tokens":110},"last_token_usage":{"input_tokens":100,"cached_input_tokens":60,"output_tokens":10,"reasoning_output_tokens":3,"total_tokens":110},"model_context_window":258400}}}
+{"timestamp":"2026-06-11T11:05:00.000Z","type":"event_msg","payload":{"type":"agent_message","message":"done"}}
+{"timestamp":"2026-06-11T11:05:01.000Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":300,"cached_input_tokens":200,"output_tokens":25,"reasoning_output_tokens":5,"total_tokens":325},"last_token_usage":{"input_tokens":200,"cached_input_tokens":140,"output_tokens":15,"reasoning_output_tokens":2,"total_tokens":215},"model_context_window":258400}}}
+{"timestamp":"2026-06-11T11:05:02.000Z","type":"event_msg","payload":{"type":"task_complete"}}
