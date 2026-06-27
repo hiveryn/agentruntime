@@ -81,9 +81,14 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 		args = append(args, "--mcp-config", path)
 		cleanupPaths = append(cleanupPaths, path)
 	}
+	// nativeSessionID is the session handle returned to consumers so they can
+	// locate the transcript pre-launch. On resume with an explicit ResumeID it
+	// is that id; on resume-most-recent it is unknowable here and left empty.
+	var nativeSessionID string
 	if req.Resume {
 		if req.ResumeID != "" {
 			args = append(args, "--resume", req.ResumeID)
+			nativeSessionID = req.ResumeID
 		} else {
 			args = append(args, "--resume")
 		}
@@ -94,6 +99,7 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 		}
 		if sessionID != "" {
 			args = append(args, "--session-id", sessionID)
+			nativeSessionID = sessionID
 		}
 	}
 	args = append(args, req.Args...)
@@ -107,11 +113,12 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 	})
 
 	return agentruntime.LaunchSpec{
-		Command:      command,
-		Args:         args,
-		Env:          env,
-		Workdir:      req.Workdir,
-		CleanupPaths: cleanupPaths,
+		Command:         command,
+		Args:            args,
+		Env:             env,
+		Workdir:         req.Workdir,
+		CleanupPaths:    cleanupPaths,
+		NativeSessionID: nativeSessionID,
 	}, nil
 }
 

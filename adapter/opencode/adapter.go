@@ -1,6 +1,10 @@
 package opencode
 
-import "github.com/hiveryn/agentruntime"
+import (
+	"context"
+
+	"github.com/hiveryn/agentruntime"
+)
 
 // Options configures the OpenCode adapter.
 type Options struct{}
@@ -22,3 +26,13 @@ func (a *Adapter) Agent() agentruntime.AgentKind { return agentruntime.AgentOpen
 // ConfigRoot returns "" — opencode resolves its plugin directory from
 // XDG_CONFIG_HOME / the home directory rather than a variant env var.
 func (a *Adapter) ConfigRoot(map[string]string) string { return "" }
+
+// LocateTranscript is not yet implemented for opencode (see its own ticket).
+func (a *Adapter) LocateTranscript(context.Context, agentruntime.LocateRequest) (string, error) {
+	return "", agentruntime.ErrUsageNotImplemented
+}
+
+// ParseUsage is not yet implemented for opencode (see its own ticket).
+func (a *Adapter) ParseUsage(context.Context, string) (agentruntime.Usage, error) {
+	return agentruntime.Usage{}, agentruntime.ErrUsageNotImplemented
+}

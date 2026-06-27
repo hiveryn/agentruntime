@@ -1,6 +1,10 @@
 package codex
 
-import "github.com/hiveryn/agentruntime"
+import (
+	"context"
+
+	"github.com/hiveryn/agentruntime"
+)
 
 type Options struct{}
 
@@ -24,4 +28,14 @@ func (a *Adapter) Agent() agentruntime.AgentKind {
 // .codex-equivalent directory.
 func (a *Adapter) ConfigRoot(env map[string]string) string {
 	return env["CODEX_HOME"]
+}
+
+// LocateTranscript is not yet implemented for codex (see its own ticket).
+func (a *Adapter) LocateTranscript(context.Context, agentruntime.LocateRequest) (string, error) {
+	return "", agentruntime.ErrUsageNotImplemented
+}
+
+// ParseUsage is not yet implemented for codex (see its own ticket).
+func (a *Adapter) ParseUsage(context.Context, string) (agentruntime.Usage, error) {
+	return agentruntime.Usage{}, agentruntime.ErrUsageNotImplemented
 }

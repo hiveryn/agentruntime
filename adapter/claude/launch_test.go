@@ -43,6 +43,9 @@ func TestPrepareLaunchInteractiveWithMCP(t *testing.T) {
 	if !hasArgPair(spec.Args, "--session-id", "00000000-0000-4000-8000-000000000001") {
 		t.Fatalf("args missing session ID: %q", spec.Args)
 	}
+	if spec.NativeSessionID != "00000000-0000-4000-8000-000000000001" {
+		t.Fatalf("NativeSessionID = %q, want minted session id", spec.NativeSessionID)
+	}
 	if len(spec.CleanupPaths) != 1 {
 		t.Fatalf("CleanupPaths: %#v", spec.CleanupPaths)
 	}
@@ -312,6 +315,9 @@ func TestPrepareLaunchResumeSpecific(t *testing.T) {
 		if arg == "--session-id" {
 			t.Fatalf("--session-id must not appear in resume mode: %q", spec.Args)
 		}
+	}
+	if spec.NativeSessionID != req.ResumeID {
+		t.Fatalf("NativeSessionID = %q, want ResumeID %q", spec.NativeSessionID, req.ResumeID)
 	}
 	if spec.Env["AGENTRUNTIME_SESSION_ID"] != req.ID {
 		t.Fatalf("AGENTRUNTIME_SESSION_ID: %q", spec.Env["AGENTRUNTIME_SESSION_ID"])

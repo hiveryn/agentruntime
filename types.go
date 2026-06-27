@@ -1,6 +1,9 @@
 package agentruntime
 
-import "time"
+import (
+	"errors"
+	"time"
+)
 
 type AgentKind string
 
@@ -84,7 +87,38 @@ type LaunchSpec struct {
 	Env          map[string]string
 	Workdir      string
 	CleanupPaths []string
+	// NativeSessionID is the agent's own session identifier when it is known
+	// before launch. Claude mints its --session-id UUID in PrepareLaunch, so it
+	// is populated here. Codex/OpenCode mint ids at runtime, so this is empty
+	// pre-launch for them (a known, expected asymmetry).
+	NativeSessionID string
 }
+
+// Usage is provider-normalized token accounting for one session. Dollar cost is
+// out of scope: agentruntime returns tokens and the resolved model id; the
+// consumer multiplies by its own price table.
+type Usage struct {
+	InputTokens      int    // uncached prompt tokens
+	OutputTokens     int    // generated tokens
+	CacheWriteTokens int    // claude: cache_creation_input_tokens
+	CacheReadTokens  int    // claude: cache_read_input_tokens
+	Model            string // resolved model id (last non-synthetic message)
+	Messages         int    // assistant turns counted
+}
+
+// LocateRequest carries the inputs needed to resolve a session's transcript
+// path. NativeSessionID is the agent's session id; ConfigRoot is the adapter's
+// resolved config directory (see Adapter.ConfigRoot); Workdir is the session's
+// working directory (used by codex/opencode discovery, unused for claude).
+type LocateRequest struct {
+	NativeSessionID string
+	ConfigRoot      string
+	Workdir         string
+}
+
+// ErrUsageNotImplemented is returned by adapters that have not yet implemented
+// usage accounting (currently codex and opencode).
+var ErrUsageNotImplemented = errors.New("usage accounting not implemented for this agent")
 
 type MCPServerConfig struct {
 	Name              string

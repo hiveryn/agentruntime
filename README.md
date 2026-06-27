@@ -204,6 +204,32 @@ exited.
 - **Subscription** — `receiver.Hub().Subscribe(ingest.Filter{ID: "session-1"})`
   returns a channel of normalized events.
 
+## Usage Accounting
+
+Adapters expose provider-normalized per-session token usage without the consumer
+touching any transcript format. The flow is: take the native session id (from
+`Event.NativeID`, or `LaunchSpec.NativeSessionID` pre-launch for Claude) →
+`LocateTranscript` → `ParseUsage`.
+
+```go
+path, err := adapter.LocateTranscript(ctx, agentruntime.LocateRequest{
+	NativeSessionID: spec.NativeSessionID, // or event.NativeID
+	ConfigRoot:      adapter.ConfigRoot(env),
+	Workdir:         "/tmp/work",
+})
+usage, err := adapter.ParseUsage(ctx, path)
+// usage.InputTokens / OutputTokens / CacheWriteTokens / CacheReadTokens / Model / Messages
+```
+
+`Usage` reports tokens and the resolved model id only — dollar cost is out of
+scope; multiply by your own price table. `LocateTranscript` is the primary
+path-discovery API (it does not depend on the live event stream). Currently only
+the Claude adapter implements both; Codex and OpenCode return
+`ErrUsageNotImplemented` until their own tickets land. `LaunchSpec.NativeSessionID`
+is populated pre-launch for Claude (it mints its `--session-id` UUID in
+`PrepareLaunch`); Codex/OpenCode mint ids at runtime, so it is empty for them
+pre-launch.
+
 ## Examples
 
 ### Codex

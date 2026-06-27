@@ -13,4 +13,10 @@ type Adapter interface {
 	EnsureSetup(context.Context, SetupRequest) (SetupResult, error)
 	RemoveSetup(context.Context, SetupRequest) (SetupResult, error)
 	NormalizeEvent(context.Context, []byte) (*Event, error)
+	// LocateTranscript resolves the absolute transcript path for a session. It
+	// is the primary path-discovery mechanism for codex/opencode; for claude it
+	// returns the path constructed from ConfigRoot and the native session id.
+	LocateTranscript(context.Context, LocateRequest) (string, error)
+	// ParseUsage reads a native session transcript and returns normalized usage.
+	ParseUsage(ctx context.Context, transcriptPath string) (Usage, error)
 }

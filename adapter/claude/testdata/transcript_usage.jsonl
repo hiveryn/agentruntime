@@ -1,0 +1,5 @@
+{"type":"summary","summary":"prior session"}
+{"type":"user","message":{"role":"user","content":"hello"}}
+{"type":"assistant","message":{"model":"claude-opus-4-8","role":"assistant","usage":{"input_tokens":100,"output_tokens":40,"cache_creation_input_tokens":200,"cache_read_input_tokens":300}}}
+{"type":"assistant","message":{"model":"<synthetic>","role":"assistant","usage":{"input_tokens":1,"output_tokens":2,"cache_creation_input_tokens":3,"cache_read_input_tokens":4}}}
+{"type":"assistant","message":{"model":"claude-sonnet-4-6","role":"assistant","usage":{"input_tokens":50,"output_tokens":60,"cache_creation_input_tokens":0,"cache_read_input_tokens":700}}}
