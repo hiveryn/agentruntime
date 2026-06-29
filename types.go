@@ -1,9 +1,6 @@
 package agentruntime
 
-import (
-	"errors"
-	"time"
-)
+import "time"
 
 type AgentKind string
 
@@ -126,10 +123,6 @@ type LocateRequest struct {
 	ConfigRoot      string
 	Workdir         string
 }
-
-// ErrUsageNotImplemented is returned by adapters that have not yet implemented
-// usage accounting (currently codex and opencode).
-var ErrUsageNotImplemented = errors.New("usage accounting not implemented for this agent")
 
 type MCPServerConfig struct {
 	Name              string
