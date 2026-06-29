@@ -519,6 +519,7 @@ func TestPrepareLaunchYoloAndMode(t *testing.T) {
 		{ID: "x", Agent: agentruntime.AgentCodex, Workdir: "/tmp", Yolo: true, Args: []string{"-s", "read-only"}},
 		{ID: "x", Agent: agentruntime.AgentCodex, Workdir: "/tmp", Yolo: true, Args: []string{"--dangerously-bypass-approvals-and-sandbox"}},
 		{ID: "x", Agent: agentruntime.AgentCodex, Workdir: "/tmp", Model: "gpt-5.4", Args: []string{"-m", "other"}},
+		{ID: "x", Agent: agentruntime.AgentCodex, Workdir: "/tmp", Args: []string{"--dangerously-bypass-hook-trust"}},
 	}
 	for i, r := range rejects {
 		if _, err := adapter.PrepareLaunch(context.Background(), r); err == nil {
@@ -603,6 +604,32 @@ func TestPrepareLaunchHeadless(t *testing.T) {
 		ID: "x", Agent: agentruntime.AgentCodex, Workdir: "/tmp", RunMode: agentruntime.RunMode("nope"),
 	}); err == nil {
 		t.Fatal("invalid run mode must error")
+	}
+}
+
+func TestPrepareLaunchEnablesTrustedHooks(t *testing.T) {
+	adapter := New(DefaultOptions())
+
+	// The adapter enables its own managed hook and must also trust it, otherwise
+	// codex silently skips the hook in a fresh CODEX_HOME. Applies to both
+	// interactive and headless launches.
+	for _, tc := range []struct {
+		name string
+		req  agentruntime.StartRequest
+	}{
+		{"interactive", agentruntime.StartRequest{ID: "i", Agent: agentruntime.AgentCodex, Workdir: "/tmp", Prompt: "go"}},
+		{"headless", agentruntime.StartRequest{ID: "h", Agent: agentruntime.AgentCodex, Workdir: "/tmp", Prompt: "go", RunMode: agentruntime.RunHeadless}},
+	} {
+		spec, err := adapter.PrepareLaunch(context.Background(), tc.req)
+		if err != nil {
+			t.Fatalf("%s: %v", tc.name, err)
+		}
+		if !hasArgPair(spec.Args, "--enable", "hooks") {
+			t.Fatalf("%s: missing --enable hooks: %q", tc.name, spec.Args)
+		}
+		if !hasArg(spec.Args, "--dangerously-bypass-hook-trust") {
+			t.Fatalf("%s: missing --dangerously-bypass-hook-trust: %q", tc.name, spec.Args)
+		}
 	}
 }
 

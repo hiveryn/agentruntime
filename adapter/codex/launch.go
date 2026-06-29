@@ -38,6 +38,15 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 		args = append(args, "exec")
 	}
 	args = append(args, "--enable", "hooks")
+	// Codex skips hooks lacking persisted trust, and consumers run each session in a
+	// fresh/relocated CODEX_HOME with no trust on record — so the adapter's own managed
+	// hook (installed by EnsureSetup) would silently never fire, taking the session id
+	// and usage capture with it. The hook is ours and vetted: codex's documented case
+	// for --dangerously-bypass-hook-trust.
+	if a, ok := agentruntime.FindManagedArg(req.Args, "--dangerously-bypass-hook-trust"); ok {
+		return agentruntime.LaunchSpec{}, fmt.Errorf("argument %q conflicts with the adapter's managed hook trust; remove it from args", a)
+	}
+	args = append(args, "--dangerously-bypass-hook-trust")
 	if req.Resume {
 		switch {
 		case req.ResumeID != "":
