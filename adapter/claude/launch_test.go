@@ -627,6 +627,87 @@ func TestPrepareLaunch_MCPNameValidation(t *testing.T) {
 	}
 }
 
+func TestPrepareLaunchHeadless(t *testing.T) {
+	mk := func() *Adapter {
+		return New(Options{NewSessionID: func() (string, error) { return "00000000-0000-4000-8000-000000000001", nil }})
+	}
+	hasArg := func(args []string, want string) bool {
+		for _, a := range args {
+			if a == want {
+				return true
+			}
+		}
+		return false
+	}
+	indexOf := func(args []string, want string) int {
+		for i, a := range args {
+			if a == want {
+				return i
+			}
+		}
+		return -1
+	}
+
+	// headless + prompt -> --print precedes the positional prompt
+	spec, err := mk().PrepareLaunch(context.Background(), agentruntime.StartRequest{
+		ID: "h", Agent: agentruntime.AgentClaude, Workdir: "/tmp", Prompt: "do it", RunMode: agentruntime.RunHeadless,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasArg(spec.Args, "--print") {
+		t.Fatalf("headless: missing --print: %q", spec.Args)
+	}
+	if pi, pr := indexOf(spec.Args, "--print"), indexOf(spec.Args, "do it"); pi < 0 || pr < 0 || pi > pr {
+		t.Fatalf("headless: --print must precede prompt: %q", spec.Args)
+	}
+
+	// headless + yolo -> both --print and --dangerously-skip-permissions
+	spec, err = mk().PrepareLaunch(context.Background(), agentruntime.StartRequest{
+		ID: "hy", Agent: agentruntime.AgentClaude, Workdir: "/tmp", Prompt: "go", RunMode: agentruntime.RunHeadless, Yolo: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasArg(spec.Args, "--print") || !hasArg(spec.Args, "--dangerously-skip-permissions") {
+		t.Fatalf("headless+yolo: want both --print and skip flag: %q", spec.Args)
+	}
+
+	// interactive default -> no --print
+	spec, err = mk().PrepareLaunch(context.Background(), agentruntime.StartRequest{
+		ID: "i", Agent: agentruntime.AgentClaude, Workdir: "/tmp", Prompt: "go",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if hasArg(spec.Args, "--print") {
+		t.Fatalf("interactive default: unexpected --print: %q", spec.Args)
+	}
+
+	// conflict: raw --print / -p with headless -> error
+	for _, raw := range [][]string{{"--print"}, {"-p"}} {
+		if _, err := mk().PrepareLaunch(context.Background(), agentruntime.StartRequest{
+			ID: "c", Agent: agentruntime.AgentClaude, Workdir: "/tmp", RunMode: agentruntime.RunHeadless, Args: raw,
+		}); err == nil {
+			t.Fatalf("headless: expected conflict error for raw %q", raw)
+		}
+	}
+
+	// escape hatch: raw -p allowed when interactive
+	if _, err := mk().PrepareLaunch(context.Background(), agentruntime.StartRequest{
+		ID: "e", Agent: agentruntime.AgentClaude, Workdir: "/tmp", Args: []string{"-p"},
+	}); err != nil {
+		t.Fatalf("escape hatch: -p should be allowed when interactive: %v", err)
+	}
+
+	// invalid run mode -> error
+	if _, err := mk().PrepareLaunch(context.Background(), agentruntime.StartRequest{
+		ID: "x", Agent: agentruntime.AgentClaude, Workdir: "/tmp", RunMode: agentruntime.RunMode("nope"),
+	}); err == nil {
+		t.Fatal("invalid run mode must error")
+	}
+}
+
 func hasArgPair(args []string, key, value string) bool {
 	for i := 0; i+1 < len(args); i++ {
 		if args[i] == key && args[i+1] == value {

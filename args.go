@@ -18,6 +18,20 @@ func (m Mode) IsPlan() (bool, error) {
 	}
 }
 
+// IsHeadless validates the run mode and reports whether it requests headless
+// (non-interactive) execution. Empty mode is treated as interactive. Unknown
+// values return an error.
+func (r RunMode) IsHeadless() (bool, error) {
+	switch r {
+	case RunInteractive:
+		return false, nil
+	case RunHeadless:
+		return true, nil
+	default:
+		return false, fmt.Errorf("unsupported run mode %q (want %q or %q)", r, RunInteractive, RunHeadless)
+	}
+}
+
 // FindManagedArg returns the first arg token that matches any of the given flag
 // names, treating `--flag`, `--flag=value`, short `-f`, `-f=value`, and the
 // attached short form `-fvalue` as matches. It is used by adapters to detect

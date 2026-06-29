@@ -46,6 +46,17 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 			return agentruntime.LaunchSpec{}, fmt.Errorf("argument %q is managed by the claude adapter", arg)
 		}
 	}
+	headless, err := req.RunMode.IsHeadless()
+	if err != nil {
+		return agentruntime.LaunchSpec{}, err
+	}
+	// -p/--print is only managed when headless, so reject it conditionally here
+	// rather than in the unconditional managedArgs map.
+	if headless {
+		if a, ok := agentruntime.FindManagedArg(req.Args, "-p", "--print"); ok {
+			return agentruntime.LaunchSpec{}, fmt.Errorf("argument %q conflicts with managed headless run mode; remove it from args", a)
+		}
+	}
 
 	command := req.Command
 	if command == "" {
@@ -54,6 +65,11 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 
 	args := make([]string, 0, len(req.Args)+8)
 	cleanupPaths := make([]string, 0, 1)
+	// Headless adds --print: claude runs to completion non-interactively and
+	// exits. It composes with --permission-mode plan (produces a plan and exits).
+	if headless {
+		args = append(args, "--print")
+	}
 	if req.Prompt != "" {
 		args = append(args, req.Prompt)
 	}

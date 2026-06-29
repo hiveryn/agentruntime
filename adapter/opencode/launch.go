@@ -56,6 +56,10 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 			return agentruntime.LaunchSpec{}, fmt.Errorf("argument %q is managed by the opencode adapter", arg)
 		}
 	}
+	headless, err := req.RunMode.IsHeadless()
+	if err != nil {
+		return agentruntime.LaunchSpec{}, err
+	}
 
 	command := req.Command
 	if command == "" {
@@ -108,7 +112,13 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 		return agentruntime.LaunchSpec{}, fmt.Errorf("marshal opencode config: %w", err)
 	}
 
-	args := make([]string, 0, len(req.Args)+6)
+	args := make([]string, 0, len(req.Args)+7)
+	// Headless is the `opencode run` subcommand (non-interactive) instead of the
+	// default TUI: run must be the first token, and the prompt is passed as a
+	// positional message rather than the TUI's --prompt flag.
+	if headless {
+		args = append(args, "run")
+	}
 	if req.Resume {
 		if req.ResumeID != "" {
 			args = append(args, "--session", req.ResumeID)
@@ -120,7 +130,11 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 		}
 	}
 	if req.Prompt != "" && (!req.Resume || req.ResumeID == "") {
-		args = append(args, "--prompt", req.Prompt)
+		if headless {
+			args = append(args, req.Prompt)
+		} else {
+			args = append(args, "--prompt", req.Prompt)
+		}
 	}
 	if req.Model != "" {
 		if a, ok := agentruntime.FindManagedArg(req.Args, "--model", "-m"); ok {

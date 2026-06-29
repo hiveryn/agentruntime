@@ -21,6 +21,14 @@ const (
 	ModePlan  Mode = "plan"  // Read-only planning/analysis.
 )
 
+// RunMode is the interactivity posture of a session.
+type RunMode string
+
+const (
+	RunInteractive RunMode = ""         // default: launch an interactive TUI session
+	RunHeadless    RunMode = "headless" // non-interactive: run to completion, print to stdout, exit
+)
+
 type Status string
 
 const (
@@ -41,16 +49,19 @@ const (
 )
 
 type StartRequest struct {
-	ID                  string
-	Agent               AgentKind
-	Command             string
-	Args                []string
-	Env                 map[string]string
-	Workdir             string
-	Prompt              string
-	Model               string // Agent model selector, translated to the agent-specific flag (e.g. --model). Agent-specific value form (claude/codex: bare id; opencode: provider/model).
-	Yolo                bool   // Full autonomy: skip approvals/permission prompts. Translated to the agent-specific flag (claude --dangerously-skip-permissions, codex --dangerously-bypass-approvals-and-sandbox, opencode permission:allow).
-	Mode                Mode   // Execution mode (build or plan). Empty defaults to build. Plan is unsupported by codex.
+	ID      string
+	Agent   AgentKind
+	Command string
+	Args    []string
+	Env     map[string]string
+	Workdir string
+	Prompt  string
+	Model   string  // Agent model selector, translated to the agent-specific flag (e.g. --model). Agent-specific value form (claude/codex: bare id; opencode: provider/model).
+	Yolo    bool    // Full autonomy: skip approvals/permission prompts. Translated to the agent-specific flag (claude --dangerously-skip-permissions, codex --dangerously-bypass-approvals-and-sandbox, opencode permission:allow).
+	Mode    Mode    // Execution mode (build or plan). Empty defaults to build. Plan is unsupported by codex.
+	RunMode RunMode // Interactivity posture. Empty defaults to interactive. Headless runs the agent
+	// non-interactively to completion and exits (claude --print, codex exec, opencode run); the consumer
+	// captures stdout and the exit code rather than a long-lived session.
 	Instructions        string
 	MCPServers          []MCPServerConfig
 	OpenCodeAgentConfig map[string]OpenCodeAgentConfig // OpenCode agent profile definitions merged into OPENCODE_CONFIG_CONTENT

@@ -20,18 +20,33 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 	if req.Agent != "" && req.Agent != agentruntime.AgentCodex {
 		return agentruntime.LaunchSpec{}, fmt.Errorf("unsupported agent %q", req.Agent)
 	}
+	headless, err := req.RunMode.IsHeadless()
+	if err != nil {
+		return agentruntime.LaunchSpec{}, err
+	}
 
 	command := req.Command
 	if command == "" {
 		command = "codex"
 	}
 
-	args := make([]string, 0, len(req.Args)+10)
+	args := make([]string, 0, len(req.Args)+12)
+	// Headless is the `codex exec` subcommand, not a flag: exec must be the first
+	// token. The shared --enable/--model/--config/--cd/prompt blocks below apply
+	// to both interactive and exec invocations.
+	if headless {
+		args = append(args, "exec")
+	}
 	args = append(args, "--enable", "hooks")
 	if req.Resume {
-		if req.ResumeID != "" {
+		switch {
+		case req.ResumeID != "":
 			args = append(args, "resume", req.ResumeID)
-		} else {
+		case headless:
+			// `codex exec resume --last` has no interactive picker, so a prompt
+			// can follow it (unlike bare interactive `codex resume`).
+			args = append(args, "resume", "--last")
+		default:
 			// Bare `codex resume` opens the interactive session picker, matching the
 			// id-less resume UX of claude's `--resume`.
 			args = append(args, "resume")
@@ -62,10 +77,11 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 
 	args = append(args, req.Args...)
 	args = append(args, "--cd", req.Workdir)
-	// For bare resume (`resume` picker), codex treats the next positional as
-	// SESSION_ID not PROMPT. Only append the prompt when starting fresh or
-	// resuming a specific session by ID.
-	if req.Prompt != "" && (!req.Resume || req.ResumeID != "") {
+	// For bare interactive resume (`resume` picker), codex treats the next
+	// positional as SESSION_ID not PROMPT. Only append the prompt when starting
+	// fresh, resuming a specific session by ID, or running headless (exec resume
+	// --last has no picker, so the prompt is safe even on resume-most-recent).
+	if req.Prompt != "" && (headless || !req.Resume || req.ResumeID != "") {
 		args = append(args, req.Prompt)
 	}
 

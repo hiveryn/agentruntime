@@ -534,6 +534,78 @@ func TestPrepareLaunchYoloAndMode(t *testing.T) {
 	}
 }
 
+func TestPrepareLaunchHeadless(t *testing.T) {
+	adapter := New(DefaultOptions())
+
+	// headless fresh + prompt -> exec is first token, prompt is last
+	spec, err := adapter.PrepareLaunch(context.Background(), agentruntime.StartRequest{
+		ID: "h", Agent: agentruntime.AgentCodex, Workdir: "/tmp", Prompt: "do it", RunMode: agentruntime.RunHeadless,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(spec.Args) == 0 || spec.Args[0] != "exec" {
+		t.Fatalf("headless: first token must be exec: %q", spec.Args)
+	}
+	if spec.Args[len(spec.Args)-1] != "do it" {
+		t.Fatalf("headless: prompt must be last: %q", spec.Args)
+	}
+
+	// headless resume id + prompt -> exec, resume <id>, prompt last
+	spec, err = adapter.PrepareLaunch(context.Background(), agentruntime.StartRequest{
+		ID: "hr", Agent: agentruntime.AgentCodex, Workdir: "/tmp", Prompt: "again", RunMode: agentruntime.RunHeadless, Resume: true, ResumeID: "sess-9",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if spec.Args[0] != "exec" || !hasArgPair(spec.Args, "resume", "sess-9") {
+		t.Fatalf("headless resume id: want exec + resume sess-9: %q", spec.Args)
+	}
+	if spec.Args[len(spec.Args)-1] != "again" {
+		t.Fatalf("headless resume id: prompt must be last: %q", spec.Args)
+	}
+
+	// headless resume-most-recent + prompt -> resume --last AND prompt present
+	// (exec resume has no interactive picker, unlike bare interactive resume).
+	spec, err = adapter.PrepareLaunch(context.Background(), agentruntime.StartRequest{
+		ID: "hl", Agent: agentruntime.AgentCodex, Workdir: "/tmp", Prompt: "more", RunMode: agentruntime.RunHeadless, Resume: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasArgPair(spec.Args, "resume", "--last") {
+		t.Fatalf("headless resume last: missing resume --last: %q", spec.Args)
+	}
+	if !hasArg(spec.Args, "more") {
+		t.Fatalf("headless resume last: prompt must be present (no picker): %q", spec.Args)
+	}
+
+	// interactive default -> first token is --enable, not exec
+	spec, err = adapter.PrepareLaunch(context.Background(), agentruntime.StartRequest{
+		ID: "i", Agent: agentruntime.AgentCodex, Workdir: "/tmp", Prompt: "go",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if spec.Args[0] == "exec" {
+		t.Fatalf("interactive default: unexpected exec token: %q", spec.Args)
+	}
+
+	// headless + plan mode -> still rejected (codex has no plan)
+	if _, err := adapter.PrepareLaunch(context.Background(), agentruntime.StartRequest{
+		ID: "p", Agent: agentruntime.AgentCodex, Workdir: "/tmp", RunMode: agentruntime.RunHeadless, Mode: agentruntime.ModePlan,
+	}); err == nil {
+		t.Fatal("headless + plan must be rejected for codex")
+	}
+
+	// invalid run mode -> error
+	if _, err := adapter.PrepareLaunch(context.Background(), agentruntime.StartRequest{
+		ID: "x", Agent: agentruntime.AgentCodex, Workdir: "/tmp", RunMode: agentruntime.RunMode("nope"),
+	}); err == nil {
+		t.Fatal("invalid run mode must error")
+	}
+}
+
 func hasArgPair(args []string, key, value string) bool {
 	for i := 0; i+1 < len(args); i++ {
 		if args[i] == key && args[i+1] == value {

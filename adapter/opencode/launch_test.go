@@ -95,8 +95,18 @@ func TestPrepareLaunch_YoloAndMode(t *testing.T) {
 
 	// conditional rejects
 	rejects := []agentruntime.StartRequest{
-		func() agentruntime.StartRequest { r := baseReq(); r.Mode = agentruntime.ModePlan; r.Args = []string{"--agent", "build"}; return r }(),
-		func() agentruntime.StartRequest { r := baseReq(); r.Model = "x/y"; r.Args = []string{"--model", "a/b"}; return r }(),
+		func() agentruntime.StartRequest {
+			r := baseReq()
+			r.Mode = agentruntime.ModePlan
+			r.Args = []string{"--agent", "build"}
+			return r
+		}(),
+		func() agentruntime.StartRequest {
+			r := baseReq()
+			r.Model = "x/y"
+			r.Args = []string{"--model", "a/b"}
+			return r
+		}(),
 		func() agentruntime.StartRequest { r := baseReq(); r.Mode = agentruntime.Mode("nope"); return r }(),
 	}
 	for i, r := range rejects {
@@ -937,5 +947,70 @@ func TestPrepareLaunch_ArgOrdering(t *testing.T) {
 	}
 	if agentIdx > callerIdx {
 		t.Errorf("--agent (%d) should come before --no-auto-share (%d)", agentIdx, callerIdx)
+	}
+}
+
+func TestPrepareLaunch_Headless(t *testing.T) {
+	a := New(DefaultOptions())
+	hasArg := func(args []string, want string) bool {
+		for _, x := range args {
+			if x == want {
+				return true
+			}
+		}
+		return false
+	}
+
+	// headless + prompt -> run is first token, prompt is positional (not --prompt)
+	req := baseReq()
+	req.Prompt = "do it"
+	req.RunMode = agentruntime.RunHeadless
+	spec, err := a.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(spec.Args) == 0 || spec.Args[0] != "run" {
+		t.Fatalf("headless: first token must be run: %q", spec.Args)
+	}
+	if !hasArg(spec.Args, "do it") {
+		t.Fatalf("headless: prompt must be a positional message: %q", spec.Args)
+	}
+	if hasArgPair(spec.Args, "--prompt", "do it") {
+		t.Fatalf("headless: must not use --prompt flag: %q", spec.Args)
+	}
+
+	// headless + resume id -> run + --session <id>
+	req = baseReq()
+	req.Prompt = "more"
+	req.RunMode = agentruntime.RunHeadless
+	req.Resume = true
+	req.ResumeID = "sess-7"
+	spec, err = a.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if spec.Args[0] != "run" || !hasArgPair(spec.Args, "--session", "sess-7") {
+		t.Fatalf("headless resume id: want run + --session sess-7: %q", spec.Args)
+	}
+
+	// interactive default -> no run token, prompt via --prompt
+	req = baseReq()
+	req.Prompt = "go"
+	spec, err = a.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if hasArg(spec.Args, "run") {
+		t.Fatalf("interactive default: unexpected run token: %q", spec.Args)
+	}
+	if !hasArgPair(spec.Args, "--prompt", "go") {
+		t.Fatalf("interactive default: prompt must use --prompt: %q", spec.Args)
+	}
+
+	// invalid run mode -> error
+	req = baseReq()
+	req.RunMode = agentruntime.RunMode("nope")
+	if _, err := a.PrepareLaunch(context.Background(), req); err == nil {
+		t.Fatal("invalid run mode must error")
 	}
 }
