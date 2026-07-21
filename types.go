@@ -52,11 +52,18 @@ type StartRequest struct {
 	Args    []string
 	Env     map[string]string
 	Workdir string
-	Prompt  string
-	Model   string  // Agent model selector, translated to the agent-specific flag (e.g. --model). Agent-specific value form (claude/codex: bare id; opencode: provider/model).
-	Yolo    bool    // Full autonomy: skip approvals/permission prompts. Translated to the agent-specific flag (claude --dangerously-skip-permissions, codex --dangerously-bypass-approvals-and-sandbox, opencode permission:allow).
-	Mode    Mode    // Execution mode (build or plan). Empty defaults to build. Plan is unsupported by codex.
-	RunMode RunMode // Interactivity posture. Empty defaults to interactive. Headless runs the agent
+	// AdditionalWorkdirs lists extra absolute directory paths the launched agent
+	// should be granted write access to, alongside the primary Workdir (e.g. other
+	// repo roots in a multi-repo ticket session). Entries must be absolute after
+	// trimming whitespace and must not duplicate each other or Workdir (compared
+	// after filepath.Clean); NormalizeAdditionalWorkdirs enforces this. Not
+	// resolved against Workdir — relative paths are rejected, not joined.
+	AdditionalWorkdirs []string
+	Prompt             string
+	Model              string  // Agent model selector, translated to the agent-specific flag (e.g. --model). Agent-specific value form (claude/codex: bare id; opencode: provider/model).
+	Yolo               bool    // Full autonomy: skip approvals/permission prompts. Translated to the agent-specific flag (claude --dangerously-skip-permissions, codex --dangerously-bypass-approvals-and-sandbox, opencode permission:allow).
+	Mode               Mode    // Execution mode (build or plan). Empty defaults to build. Plan is unsupported by codex.
+	RunMode            RunMode // Interactivity posture. Empty defaults to interactive. Headless runs the agent
 	// non-interactively to completion and exits (claude --print, codex exec, opencode run); the consumer
 	// captures stdout and the exit code rather than a long-lived session.
 	Instructions        string
@@ -90,11 +97,17 @@ type Event struct {
 }
 
 type LaunchSpec struct {
-	Command      string
-	Args         []string
-	Env          map[string]string
-	Workdir      string
-	CleanupPaths []string
+	Command string
+	Args    []string
+	Env     map[string]string
+	Workdir string
+	// AdditionalWorkdirs is the normalized (absolute, cleaned, deduped) list of
+	// extra directories granted to the launched agent, mirroring
+	// StartRequest.AdditionalWorkdirs. Unlike Workdir, callers need not take any
+	// action on this field to apply it (each adapter already encodes the grant
+	// into Args or Env) — surfaced for caller visibility/debugging.
+	AdditionalWorkdirs []string
+	CleanupPaths       []string
 	// NativeSessionID is the agent's own session identifier when it is known
 	// before launch. Claude mints its --session-id UUID in PrepareLaunch, so it
 	// is populated here. Codex/OpenCode mint ids at runtime, so this is empty

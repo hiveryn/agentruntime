@@ -633,6 +633,140 @@ func TestPrepareLaunchEnablesTrustedHooks(t *testing.T) {
 	}
 }
 
+func countArgPair(args []string, key, value string) int {
+	count := 0
+	for i := 0; i+1 < len(args); i++ {
+		if args[i] == key && args[i+1] == value {
+			count++
+		}
+	}
+	return count
+}
+
+func TestPrepareLaunchAdditionalWorkdirs(t *testing.T) {
+	adapter := New(DefaultOptions())
+	req := agentruntime.StartRequest{
+		ID:                 "session-1",
+		Agent:              agentruntime.AgentCodex,
+		Workdir:            "/tmp/work",
+		AdditionalWorkdirs: []string{"/repo-b", "/repo-c"},
+	}
+	spec, err := adapter.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasArgPair(spec.Args, "--add-dir", "/repo-b") {
+		t.Fatalf("args missing --add-dir /repo-b: %q", spec.Args)
+	}
+	if !hasArgPair(spec.Args, "--add-dir", "/repo-c") {
+		t.Fatalf("args missing --add-dir /repo-c: %q", spec.Args)
+	}
+	if countArgPair(spec.Args, "--add-dir", "/repo-b")+countArgPair(spec.Args, "--add-dir", "/repo-c") != 2 {
+		t.Fatalf("expected exactly one --add-dir pair per dir: %q", spec.Args)
+	}
+	if len(spec.AdditionalWorkdirs) != 2 || spec.AdditionalWorkdirs[0] != "/repo-b" || spec.AdditionalWorkdirs[1] != "/repo-c" {
+		t.Fatalf("spec.AdditionalWorkdirs: %v", spec.AdditionalWorkdirs)
+	}
+}
+
+func TestPrepareLaunchAdditionalWorkdirsManagedArgConflict(t *testing.T) {
+	adapter := New(DefaultOptions())
+	req := agentruntime.StartRequest{
+		ID:      "session-1",
+		Agent:   agentruntime.AgentCodex,
+		Workdir: "/tmp/work",
+		Args:    []string{"--add-dir", "/sneaky"},
+	}
+	if _, err := adapter.PrepareLaunch(context.Background(), req); err == nil {
+		t.Fatal("expected error for managed arg --add-dir in req.Args")
+	}
+}
+
+func TestPrepareLaunchAdditionalWorkdirsRejectsRelativePath(t *testing.T) {
+	adapter := New(DefaultOptions())
+	req := agentruntime.StartRequest{
+		ID:                 "session-1",
+		Agent:              agentruntime.AgentCodex,
+		Workdir:            "/tmp/work",
+		AdditionalWorkdirs: []string{"relative-dir"},
+	}
+	if _, err := adapter.PrepareLaunch(context.Background(), req); err == nil {
+		t.Fatal("expected error for relative additional workdir")
+	}
+}
+
+func TestPrepareLaunchAdditionalWorkdirsRejectsDuplicateOfWorkdir(t *testing.T) {
+	adapter := New(DefaultOptions())
+	req := agentruntime.StartRequest{
+		ID:                 "session-1",
+		Agent:              agentruntime.AgentCodex,
+		Workdir:            "/tmp/work",
+		AdditionalWorkdirs: []string{"/tmp/work"},
+	}
+	if _, err := adapter.PrepareLaunch(context.Background(), req); err == nil {
+		t.Fatal("expected error for additional workdir duplicating primary workdir")
+	}
+}
+
+func TestPrepareLaunchAdditionalWorkdirsBareResume(t *testing.T) {
+	adapter := New(DefaultOptions())
+	req := agentruntime.StartRequest{
+		ID:                 "session-1",
+		Agent:              agentruntime.AgentCodex,
+		Workdir:            "/tmp/work",
+		Resume:             true,
+		AdditionalWorkdirs: []string{"/repo-b"},
+	}
+	spec, err := adapter.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasArgPair(spec.Args, "--add-dir", "/repo-b") {
+		t.Fatalf("bare resume: missing --add-dir /repo-b: %q", spec.Args)
+	}
+}
+
+func TestPrepareLaunchAdditionalWorkdirsResumeByID(t *testing.T) {
+	adapter := New(DefaultOptions())
+	req := agentruntime.StartRequest{
+		ID:                 "session-1",
+		Agent:              agentruntime.AgentCodex,
+		Workdir:            "/tmp/work",
+		Resume:             true,
+		ResumeID:           "abc-def",
+		AdditionalWorkdirs: []string{"/repo-b"},
+	}
+	spec, err := adapter.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasArgPair(spec.Args, "--add-dir", "/repo-b") {
+		t.Fatalf("resume by id: missing --add-dir /repo-b: %q", spec.Args)
+	}
+}
+
+func TestPrepareLaunchAdditionalWorkdirsHeadlessExecResume(t *testing.T) {
+	adapter := New(DefaultOptions())
+	req := agentruntime.StartRequest{
+		ID:                 "session-1",
+		Agent:              agentruntime.AgentCodex,
+		Workdir:            "/tmp/work",
+		Resume:             true,
+		RunMode:            agentruntime.RunHeadless,
+		AdditionalWorkdirs: []string{"/repo-b"},
+	}
+	spec, err := adapter.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasArg(spec.Args, "--last") {
+		t.Fatalf("headless exec resume: missing --last: %q", spec.Args)
+	}
+	if !hasArgPair(spec.Args, "--add-dir", "/repo-b") {
+		t.Fatalf("headless exec resume: missing --add-dir /repo-b: %q", spec.Args)
+	}
+}
+
 func hasArgPair(args []string, key, value string) bool {
 	for i := 0; i+1 < len(args); i++ {
 		if args[i] == key && args[i+1] == value {

@@ -708,6 +708,138 @@ func TestPrepareLaunchHeadless(t *testing.T) {
 	}
 }
 
+func indexOfArg(args []string, want string) int {
+	for i, arg := range args {
+		if arg == want {
+			return i
+		}
+	}
+	return -1
+}
+
+func TestPrepareLaunchAdditionalWorkdirs(t *testing.T) {
+	adapter := New(Options{})
+	req := agentruntime.StartRequest{
+		ID:                 "session-1",
+		Agent:              agentruntime.AgentClaude,
+		Workdir:            "/tmp/work",
+		AdditionalWorkdirs: []string{"/repo-b", "/repo-c"},
+	}
+	spec, err := adapter.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	addDirIdx := indexOfArg(spec.Args, "--add-dir")
+	if addDirIdx == -1 {
+		t.Fatalf("args missing --add-dir: %q", spec.Args)
+	}
+	if len(spec.Args) < addDirIdx+3 || spec.Args[addDirIdx+1] != "/repo-b" || spec.Args[addDirIdx+2] != "/repo-c" {
+		t.Fatalf("--add-dir should be followed by both dirs: %q", spec.Args)
+	}
+	if len(spec.AdditionalWorkdirs) != 2 || spec.AdditionalWorkdirs[0] != "/repo-b" || spec.AdditionalWorkdirs[1] != "/repo-c" {
+		t.Fatalf("spec.AdditionalWorkdirs: %v", spec.AdditionalWorkdirs)
+	}
+}
+
+func TestPrepareLaunchAdditionalWorkdirsManagedArgConflict(t *testing.T) {
+	adapter := New(Options{})
+	req := agentruntime.StartRequest{
+		ID:      "session-1",
+		Agent:   agentruntime.AgentClaude,
+		Workdir: "/tmp/work",
+		Args:    []string{"--add-dir", "/sneaky"},
+	}
+	if _, err := adapter.PrepareLaunch(context.Background(), req); err == nil {
+		t.Fatal("expected error for managed arg --add-dir in req.Args")
+	}
+}
+
+func TestPrepareLaunchAdditionalWorkdirsRejectsRelativePath(t *testing.T) {
+	adapter := New(Options{})
+	req := agentruntime.StartRequest{
+		ID:                 "session-1",
+		Agent:              agentruntime.AgentClaude,
+		Workdir:            "/tmp/work",
+		AdditionalWorkdirs: []string{"relative-dir"},
+	}
+	if _, err := adapter.PrepareLaunch(context.Background(), req); err == nil {
+		t.Fatal("expected error for relative additional workdir")
+	}
+}
+
+func TestPrepareLaunchAdditionalWorkdirsRejectsDuplicateOfWorkdir(t *testing.T) {
+	adapter := New(Options{})
+	req := agentruntime.StartRequest{
+		ID:                 "session-1",
+		Agent:              agentruntime.AgentClaude,
+		Workdir:            "/tmp/work",
+		AdditionalWorkdirs: []string{"/tmp/work"},
+	}
+	if _, err := adapter.PrepareLaunch(context.Background(), req); err == nil {
+		t.Fatal("expected error for additional workdir duplicating primary workdir")
+	}
+}
+
+func TestPrepareLaunchAdditionalWorkdirsBareResume(t *testing.T) {
+	adapter := New(Options{})
+	req := agentruntime.StartRequest{
+		ID:                 "session-1",
+		Agent:              agentruntime.AgentClaude,
+		Workdir:            "/tmp/work",
+		Resume:             true,
+		AdditionalWorkdirs: []string{"/repo-b"},
+	}
+	spec, err := adapter.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if indexOfArg(spec.Args, "--add-dir") == -1 {
+		t.Fatalf("bare resume: missing --add-dir: %q", spec.Args)
+	}
+}
+
+func TestPrepareLaunchAdditionalWorkdirsResumeByID(t *testing.T) {
+	adapter := New(Options{})
+	req := agentruntime.StartRequest{
+		ID:                 "session-1",
+		Agent:              agentruntime.AgentClaude,
+		Workdir:            "/tmp/work",
+		Resume:             true,
+		ResumeID:           "abc-def",
+		AdditionalWorkdirs: []string{"/repo-b"},
+	}
+	spec, err := adapter.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if indexOfArg(spec.Args, "--add-dir") == -1 {
+		t.Fatalf("resume by id: missing --add-dir: %q", spec.Args)
+	}
+}
+
+func TestPrepareLaunchAdditionalWorkdirsPrecedesRawArgs(t *testing.T) {
+	adapter := New(Options{})
+	req := agentruntime.StartRequest{
+		ID:                 "session-1",
+		Agent:              agentruntime.AgentClaude,
+		Workdir:            "/tmp/work",
+		AdditionalWorkdirs: []string{"/repo-b"},
+		Args:               []string{"--no-auto-share"},
+	}
+	spec, err := adapter.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	addDirIdx := indexOfArg(spec.Args, "--add-dir")
+	callerIdx := indexOfArg(spec.Args, "--no-auto-share")
+	if addDirIdx == -1 || callerIdx == -1 {
+		t.Fatalf("missing expected args: %q", spec.Args)
+	}
+	if addDirIdx > callerIdx {
+		t.Errorf("--add-dir (%d) should precede raw caller args (%d): %q", addDirIdx, callerIdx, spec.Args)
+	}
+}
+
 func hasArgPair(args []string, key, value string) bool {
 	for i := 0; i+1 < len(args); i++ {
 		if args[i] == key && args[i+1] == value {

@@ -94,6 +94,13 @@ agentruntime.HookCommand{Endpoint: "http://127.0.0.1:9000"}
 - **`Args`** — additional CLI arguments appended after synthesized arguments.
 - **`Env`** — optional extra environment for the launched process.
 - **`Workdir`** — required working directory.
+- **`AdditionalWorkdirs`** — optional list of extra absolute directory paths the
+  launched agent is granted write access to, alongside `Workdir` (e.g. other
+  repo roots in a multi-repo session). Entries must be absolute after trimming
+  whitespace and must not duplicate each other or `Workdir` (compared after
+  `filepath.Clean`) — violations are rejected fail-fast via
+  `NormalizeAdditionalWorkdirs`. Not resolved against `Workdir`. See
+  [Additional Workdirs](#additional-workdirs).
 - **`Prompt`** — initial prompt when the runtime supports it.
 - **`Instructions`** — runtime-specific instruction/system-prompt input.
 - **`MCPServers`** — stdio or HTTP MCP servers synthesized into the runtime's
@@ -157,9 +164,29 @@ through `StartRequest.Args`:
 
 | Adapter  | Managed Args                                                                     |
 |----------|----------------------------------------------------------------------------------|
-| Claude   | `--append-system-prompt`, `--system-prompt`, `--mcp-config`, `--session-id`, `--resume` |
-| Codex    | (none — top-level args pass through; `resume` is a subcommand)                   |
+| Claude   | `--append-system-prompt`, `--system-prompt`, `--mcp-config`, `--session-id`, `--resume`, `--add-dir` |
+| Codex    | `--add-dir` (other top-level args pass through; `resume` is a subcommand)        |
 | OpenCode | `--prompt`, `--continue`, `-c`, `--session`, `-s`                                |
+
+### Additional Workdirs
+
+`StartRequest.AdditionalWorkdirs` grants write access to extra directories
+beyond the primary `Workdir`, using each adapter's native mechanism:
+
+- **Codex** — a repeatable `--add-dir <dir>` flag, one pair per directory,
+  emitted alongside `--cd <Workdir>`.
+- **Claude** — a single `--add-dir <dir1> <dir2> ...` flag taking all
+  directories as trailing positional values.
+- **OpenCode** — no CLI flag; each directory is granted via
+  `permission.external_directory` in `OPENCODE_CONFIG_CONTENT`
+  (`"<dir>/**": "allow"`). When `Yolo` is also set, the blanket
+  `permission: "allow"` already covers external directories, so no separate
+  entries are added.
+
+The normalized (absolute, cleaned, deduped) list is echoed back on
+`LaunchSpec.AdditionalWorkdirs` for caller visibility; no caller action is
+required to apply it (unlike `Workdir`), and it is applied identically on
+fresh launch and every resume variant.
 
 ### Resume Behavior
 

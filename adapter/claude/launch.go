@@ -29,6 +29,7 @@ var managedArgs = map[string]struct{}{
 	"--mcp-config":           {},
 	"--session-id":           {},
 	"--resume":               {},
+	"--add-dir":              {},
 }
 
 func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest) (agentruntime.LaunchSpec, error) {
@@ -37,6 +38,10 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 	}
 	if req.Workdir == "" {
 		return agentruntime.LaunchSpec{}, fmt.Errorf("missing workdir")
+	}
+	additionalWorkdirs, err := agentruntime.NormalizeAdditionalWorkdirs(req.Workdir, req.AdditionalWorkdirs)
+	if err != nil {
+		return agentruntime.LaunchSpec{}, err
 	}
 	if req.Agent != "" && req.Agent != agentruntime.AgentClaude {
 		return agentruntime.LaunchSpec{}, fmt.Errorf("unsupported agent %q", req.Agent)
@@ -63,7 +68,7 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 		command = "claude"
 	}
 
-	args := make([]string, 0, len(req.Args)+8)
+	args := make([]string, 0, len(req.Args)+8+len(additionalWorkdirs))
 	cleanupPaths := make([]string, 0, 1)
 	// Headless adds --print: claude runs to completion non-interactively and
 	// exits. It composes with --permission-mode plan (produces a plan and exits).
@@ -118,6 +123,10 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 			nativeSessionID = sessionID
 		}
 	}
+	if len(additionalWorkdirs) > 0 {
+		args = append(args, "--add-dir")
+		args = append(args, additionalWorkdirs...)
+	}
 	args = append(args, req.Args...)
 
 	if v, ok := req.Env["AGENTRUNTIME_SESSION_ID"]; ok && v != "" && v != req.ID {
@@ -129,12 +138,13 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 	})
 
 	return agentruntime.LaunchSpec{
-		Command:         command,
-		Args:            args,
-		Env:             env,
-		Workdir:         req.Workdir,
-		CleanupPaths:    cleanupPaths,
-		NativeSessionID: nativeSessionID,
+		Command:            command,
+		Args:               args,
+		Env:                env,
+		Workdir:            req.Workdir,
+		AdditionalWorkdirs: additionalWorkdirs,
+		CleanupPaths:       cleanupPaths,
+		NativeSessionID:    nativeSessionID,
 	}, nil
 }
 

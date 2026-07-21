@@ -950,6 +950,136 @@ func TestPrepareLaunch_ArgOrdering(t *testing.T) {
 	}
 }
 
+func TestPrepareLaunch_AdditionalWorkdirsNoYolo(t *testing.T) {
+	a := New(DefaultOptions())
+	req := baseReq()
+	req.AdditionalWorkdirs = []string{"/repo-b", "/repo-c"}
+	spec, err := a.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var cfg ocConfig
+	if err := json.Unmarshal([]byte(spec.Env["OPENCODE_CONFIG_CONTENT"]), &cfg); err != nil {
+		t.Fatalf("parse OPENCODE_CONFIG_CONTENT: %v", err)
+	}
+	permission, ok := cfg.Permission.(map[string]any)
+	if !ok {
+		t.Fatalf("expected object permission, got %#v", cfg.Permission)
+	}
+	externalDir, ok := permission["external_directory"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected external_directory map, got %#v", permission["external_directory"])
+	}
+	if externalDir["/repo-b/**"] != "allow" {
+		t.Errorf("external_directory[/repo-b/**]: got %v", externalDir["/repo-b/**"])
+	}
+	if externalDir["/repo-c/**"] != "allow" {
+		t.Errorf("external_directory[/repo-c/**]: got %v", externalDir["/repo-c/**"])
+	}
+
+	if len(spec.AdditionalWorkdirs) != 2 || spec.AdditionalWorkdirs[0] != "/repo-b" || spec.AdditionalWorkdirs[1] != "/repo-c" {
+		t.Fatalf("spec.AdditionalWorkdirs: %v", spec.AdditionalWorkdirs)
+	}
+}
+
+func TestPrepareLaunch_AdditionalWorkdirsWithYolo(t *testing.T) {
+	a := New(DefaultOptions())
+	req := baseReq()
+	req.Yolo = true
+	req.AdditionalWorkdirs = []string{"/repo-b"}
+	spec, err := a.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var cfg ocConfig
+	if err := json.Unmarshal([]byte(spec.Env["OPENCODE_CONFIG_CONTENT"]), &cfg); err != nil {
+		t.Fatalf("parse OPENCODE_CONFIG_CONTENT: %v", err)
+	}
+	if cfg.Permission != "allow" {
+		t.Fatalf("yolo+additional dirs: expected bare permission allow, got %v", cfg.Permission)
+	}
+}
+
+func TestPrepareLaunch_NoAdditionalWorkdirsNoYolo_PermissionOmitted(t *testing.T) {
+	a := New(DefaultOptions())
+	spec, err := a.PrepareLaunch(context.Background(), baseReq())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(spec.Env["OPENCODE_CONFIG_CONTENT"], `"permission"`) {
+		t.Fatalf("permission key should be absent when neither yolo nor additional dirs are set: %s", spec.Env["OPENCODE_CONFIG_CONTENT"])
+	}
+}
+
+func TestPrepareLaunch_AdditionalWorkdirsRejectsRelativePath(t *testing.T) {
+	a := New(DefaultOptions())
+	req := baseReq()
+	req.AdditionalWorkdirs = []string{"relative-dir"}
+	if _, err := a.PrepareLaunch(context.Background(), req); err == nil {
+		t.Fatal("expected error for relative additional workdir")
+	}
+}
+
+func TestPrepareLaunch_AdditionalWorkdirsRejectsDuplicateOfWorkdir(t *testing.T) {
+	a := New(DefaultOptions())
+	req := baseReq()
+	req.AdditionalWorkdirs = []string{req.Workdir}
+	if _, err := a.PrepareLaunch(context.Background(), req); err == nil {
+		t.Fatal("expected error for additional workdir duplicating primary workdir")
+	}
+}
+
+func TestPrepareLaunch_AdditionalWorkdirsResumeSpecific(t *testing.T) {
+	a := New(DefaultOptions())
+	req := baseReq()
+	req.Resume = true
+	req.ResumeID = "ses_21277c40fffeuBv0E2V7Y81mkA"
+	req.AdditionalWorkdirs = []string{"/repo-b"}
+	spec, err := a.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var cfg ocConfig
+	if err := json.Unmarshal([]byte(spec.Env["OPENCODE_CONFIG_CONTENT"]), &cfg); err != nil {
+		t.Fatalf("parse OPENCODE_CONFIG_CONTENT: %v", err)
+	}
+	permission, ok := cfg.Permission.(map[string]any)
+	if !ok {
+		t.Fatalf("resume by id: expected object permission, got %#v", cfg.Permission)
+	}
+	externalDir, ok := permission["external_directory"].(map[string]any)
+	if !ok || externalDir["/repo-b/**"] != "allow" {
+		t.Fatalf("resume by id: missing external_directory grant: %#v", permission)
+	}
+}
+
+func TestPrepareLaunch_AdditionalWorkdirsResumeBare(t *testing.T) {
+	a := New(DefaultOptions())
+	req := baseReq()
+	req.Resume = true
+	req.AdditionalWorkdirs = []string{"/repo-b"}
+	spec, err := a.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var cfg ocConfig
+	if err := json.Unmarshal([]byte(spec.Env["OPENCODE_CONFIG_CONTENT"]), &cfg); err != nil {
+		t.Fatalf("parse OPENCODE_CONFIG_CONTENT: %v", err)
+	}
+	permission, ok := cfg.Permission.(map[string]any)
+	if !ok {
+		t.Fatalf("bare resume: expected object permission, got %#v", cfg.Permission)
+	}
+	externalDir, ok := permission["external_directory"].(map[string]any)
+	if !ok || externalDir["/repo-b/**"] != "allow" {
+		t.Fatalf("bare resume: missing external_directory grant: %#v", permission)
+	}
+}
+
 func TestPrepareLaunch_Headless(t *testing.T) {
 	a := New(DefaultOptions())
 	hasArg := func(args []string, want string) bool {

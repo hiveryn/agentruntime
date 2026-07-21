@@ -17,6 +17,10 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 	if req.Workdir == "" {
 		return agentruntime.LaunchSpec{}, fmt.Errorf("missing workdir")
 	}
+	additionalWorkdirs, err := agentruntime.NormalizeAdditionalWorkdirs(req.Workdir, req.AdditionalWorkdirs)
+	if err != nil {
+		return agentruntime.LaunchSpec{}, err
+	}
 	if req.Agent != "" && req.Agent != agentruntime.AgentCodex {
 		return agentruntime.LaunchSpec{}, fmt.Errorf("unsupported agent %q", req.Agent)
 	}
@@ -30,7 +34,7 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 		command = "codex"
 	}
 
-	args := make([]string, 0, len(req.Args)+12)
+	args := make([]string, 0, len(req.Args)+12+2*len(additionalWorkdirs))
 	// Headless is the `codex exec` subcommand, not a flag: exec must be the first
 	// token. The shared --enable/--model/--config/--cd/prompt blocks below apply
 	// to both interactive and exec invocations.
@@ -84,8 +88,14 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 		args = append(args, serverArgs...)
 	}
 
+	if a, ok := agentruntime.FindManagedArg(req.Args, "--add-dir"); ok {
+		return agentruntime.LaunchSpec{}, fmt.Errorf("argument %q conflicts with managed additional workdirs; remove it from args", a)
+	}
 	args = append(args, req.Args...)
 	args = append(args, "--cd", req.Workdir)
+	for _, dir := range additionalWorkdirs {
+		args = append(args, "--add-dir", dir)
+	}
 	// For bare interactive resume (`resume` picker), codex treats the next
 	// positional as SESSION_ID not PROMPT. Only append the prompt when starting
 	// fresh, resuming a specific session by ID, or running headless (exec resume
@@ -103,10 +113,11 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 	})
 
 	return agentruntime.LaunchSpec{
-		Command: command,
-		Args:    args,
-		Env:     env,
-		Workdir: req.Workdir,
+		Command:            command,
+		Args:               args,
+		Env:                env,
+		Workdir:            req.Workdir,
+		AdditionalWorkdirs: additionalWorkdirs,
 	}, nil
 }
 

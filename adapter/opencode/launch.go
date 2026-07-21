@@ -48,6 +48,10 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 	if req.Workdir == "" {
 		return agentruntime.LaunchSpec{}, fmt.Errorf("missing workdir")
 	}
+	additionalWorkdirs, err := agentruntime.NormalizeAdditionalWorkdirs(req.Workdir, req.AdditionalWorkdirs)
+	if err != nil {
+		return agentruntime.LaunchSpec{}, err
+	}
 	if req.Agent != "" && req.Agent != agentruntime.AgentOpenCode {
 		return agentruntime.LaunchSpec{}, fmt.Errorf("unsupported agent %q", req.Agent)
 	}
@@ -103,8 +107,20 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 
 	// opencode has no permission-bypass CLI flag; full autonomy is expressed in
 	// config. There is no raw arg to conflict with, so nothing to reject here.
-	if req.Yolo {
+	switch {
+	case req.Yolo:
+		// Blanket "allow" is already a superset of any per-directory
+		// external_directory grant, so additional workdirs need no separate
+		// entry here.
 		cfg.Permission = "allow"
+	case len(additionalWorkdirs) > 0:
+		externalDir := make(map[string]string, len(additionalWorkdirs))
+		for _, dir := range additionalWorkdirs {
+			externalDir[dir+"/**"] = "allow"
+		}
+		cfg.Permission = map[string]any{
+			"external_directory": externalDir,
+		}
 	}
 
 	configJSON, err := json.Marshal(cfg)
@@ -170,11 +186,12 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 	env := buildEnv(req.Env, req.ID, string(configJSON))
 
 	return agentruntime.LaunchSpec{
-		Command:      command,
-		Args:         args,
-		Env:          env,
-		Workdir:      req.Workdir,
-		CleanupPaths: cleanupPaths,
+		Command:            command,
+		Args:               args,
+		Env:                env,
+		Workdir:            req.Workdir,
+		AdditionalWorkdirs: additionalWorkdirs,
+		CleanupPaths:       cleanupPaths,
 	}, nil
 }
 
