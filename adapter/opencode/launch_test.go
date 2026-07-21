@@ -1080,6 +1080,125 @@ func TestPrepareLaunch_AdditionalWorkdirsResumeBare(t *testing.T) {
 	}
 }
 
+func TestPrepareLaunch_AgentPermissionConflictsWithAdditionalWorkdirs(t *testing.T) {
+	a := New(DefaultOptions())
+
+	cases := map[string]map[string]string{
+		"external_directory deny": {"external_directory": "deny"},
+		"external_directory ask":  {"external_directory": "ask"},
+		"wildcard deny":           {"*": "deny"},
+		"wildcard ask":            {"*": "ask"},
+	}
+	for name, perm := range cases {
+		t.Run(name, func(t *testing.T) {
+			req := baseReq()
+			req.AdditionalWorkdirs = []string{"/repo-b"}
+			req.OpenCodeAgentConfig = map[string]agentruntime.OpenCodeAgentConfig{
+				"cortex": {Description: "Cortex", Mode: "auto", Permission: perm},
+			}
+			_, err := a.PrepareLaunch(context.Background(), req)
+			if err == nil {
+				t.Fatalf("expected error for conflicting agent permission %#v", perm)
+			}
+			if !strings.Contains(err.Error(), "cortex") || !strings.Contains(err.Error(), "/repo-b") {
+				t.Errorf("error missing full context (agent name / workdir): %v", err)
+			}
+		})
+	}
+}
+
+func TestPrepareLaunch_AgentPermissionAllowNoConflict(t *testing.T) {
+	a := New(DefaultOptions())
+	req := baseReq()
+	req.AdditionalWorkdirs = []string{"/repo-b"}
+	req.OpenCodeAgentConfig = map[string]agentruntime.OpenCodeAgentConfig{
+		"cortex": {Description: "Cortex", Mode: "auto", Permission: map[string]string{"external_directory": "allow"}},
+	}
+	if _, err := a.PrepareLaunch(context.Background(), req); err != nil {
+		t.Fatalf("blanket allow should not conflict: %v", err)
+	}
+}
+
+func TestPrepareLaunch_AgentPermissionUnrelatedKeyPreserved(t *testing.T) {
+	a := New(DefaultOptions())
+	req := baseReq()
+	req.AdditionalWorkdirs = []string{"/repo-b"}
+	req.OpenCodeAgentConfig = map[string]agentruntime.OpenCodeAgentConfig{
+		"cortex": {Description: "Cortex", Mode: "auto", Permission: map[string]string{"bash": "deny"}},
+	}
+	spec, err := a.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatalf("unrelated permission key should not conflict: %v", err)
+	}
+
+	var cfg ocConfig
+	if err := json.Unmarshal([]byte(spec.Env["OPENCODE_CONFIG_CONTENT"]), &cfg); err != nil {
+		t.Fatalf("parse OPENCODE_CONFIG_CONTENT: %v", err)
+	}
+	if cfg.Agent["cortex"].Permission["bash"] != "deny" {
+		t.Errorf("expected user's bash permission preserved, got %#v", cfg.Agent["cortex"].Permission)
+	}
+	permission, ok := cfg.Permission.(map[string]any)
+	if !ok {
+		t.Fatalf("expected object permission, got %#v", cfg.Permission)
+	}
+	externalDir, ok := permission["external_directory"].(map[string]any)
+	if !ok || externalDir["/repo-b/**"] != "allow" {
+		t.Fatalf("missing external_directory grant: %#v", permission)
+	}
+}
+
+func TestPrepareLaunch_AgentPermissionConflictWithoutAdditionalWorkdirsAllowed(t *testing.T) {
+	// No additional workdirs requested -> nothing to protect, agent's own
+	// external_directory policy is entirely its own business.
+	a := New(DefaultOptions())
+	req := baseReq()
+	req.OpenCodeAgentConfig = map[string]agentruntime.OpenCodeAgentConfig{
+		"cortex": {Description: "Cortex", Mode: "auto", Permission: map[string]string{"external_directory": "deny"}},
+	}
+	if _, err := a.PrepareLaunch(context.Background(), req); err != nil {
+		t.Fatalf("no additional workdirs requested, agent permission should pass through: %v", err)
+	}
+}
+
+func TestPrepareLaunch_AgentPermissionConflictsWithYoloAndAdditionalWorkdirs(t *testing.T) {
+	a := New(DefaultOptions())
+	req := baseReq()
+	req.Yolo = true
+	req.AdditionalWorkdirs = []string{"/repo-b"}
+	req.OpenCodeAgentConfig = map[string]agentruntime.OpenCodeAgentConfig{
+		"cortex": {Description: "Cortex", Mode: "auto", Permission: map[string]string{"external_directory": "ask"}},
+	}
+	if _, err := a.PrepareLaunch(context.Background(), req); err == nil {
+		t.Fatal("expected error: agent permission would shadow the Yolo blanket allow for additional workdirs")
+	}
+}
+
+func TestPrepareLaunch_AgentPermissionConflictsOnResume(t *testing.T) {
+	a := New(DefaultOptions())
+
+	req := baseReq()
+	req.Resume = true
+	req.ResumeID = "ses_21277c40fffeuBv0E2V7Y81mkA"
+	req.AdditionalWorkdirs = []string{"/repo-b"}
+	req.OpenCodeAgentConfig = map[string]agentruntime.OpenCodeAgentConfig{
+		"cortex": {Description: "Cortex", Mode: "auto", Permission: map[string]string{"external_directory": "deny"}},
+	}
+	if _, err := a.PrepareLaunch(context.Background(), req); err == nil {
+		t.Fatal("resume by id: expected error for conflicting agent permission")
+	}
+
+	req = baseReq()
+	req.Resume = true
+	req.AdditionalWorkdirs = []string{"/repo-b"}
+	req.OpenCodeAgentConfig = map[string]agentruntime.OpenCodeAgentConfig{
+		"cortex": {Description: "Cortex", Mode: "auto", Permission: map[string]string{"external_directory": "deny"}},
+	}
+	if _, err := a.PrepareLaunch(context.Background(), req); err == nil {
+		t.Fatal("bare resume: expected error for conflicting agent permission")
+	}
+}
+
 func TestPrepareLaunch_Headless(t *testing.T) {
 	a := New(DefaultOptions())
 	hasArg := func(args []string, want string) bool {

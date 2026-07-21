@@ -96,6 +96,11 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 	if len(req.OpenCodeAgentConfig) > 0 {
 		cfg.Agent = make(map[string]ocAgentEntry, len(req.OpenCodeAgentConfig))
 		for name, ac := range req.OpenCodeAgentConfig {
+			if len(additionalWorkdirs) > 0 {
+				if err := checkAgentPermissionConflict(name, ac.Permission, additionalWorkdirs); err != nil {
+					return agentruntime.LaunchSpec{}, err
+				}
+			}
 			cfg.Agent[name] = ocAgentEntry{
 				Description: ac.Description,
 				Mode:        ac.Mode,
@@ -193,6 +198,26 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 		AdditionalWorkdirs: additionalWorkdirs,
 		CleanupPaths:       cleanupPaths,
 	}, nil
+}
+
+// checkAgentPermissionConflict rejects an OpenCode agent profile whose declared
+// permission would weaken the scoped external_directory grant synthesized for
+// additionalWorkdirs. OpenCode merges an agent's own `permission` config after
+// the global config and lets the last matching rule win, so any agent-level
+// `external_directory` or catch-all `*` entry that isn't "allow" silently
+// shadows our per-directory grant (including the Yolo blanket allow) for that
+// agent. There is no way to safely carve out just the requested directories
+// from within that agent's flat permission map without relying on JSON
+// key-order semantics we don't control, so fail fast instead of composing
+// something that might not actually take effect.
+func checkAgentPermissionConflict(name string, permission map[string]string, additionalWorkdirs []string) error {
+	for _, key := range []string{"external_directory", "*"} {
+		action, ok := permission[key]
+		if ok && action != "allow" {
+			return fmt.Errorf("opencode agent %q sets permission[%q]=%q, which would weaken the required external_directory grant for additional workdirs %v; remove it or set it to \"allow\"", name, key, action, additionalWorkdirs)
+		}
+	}
+	return nil
 }
 
 func writeInstructions(instructions string) (string, error) {

@@ -183,6 +183,19 @@ beyond the primary `Workdir`, using each adapter's native mechanism:
   `permission: "allow"` already covers external directories, so no separate
   entries are added.
 
+**OpenCode agent-permission hardening.** OpenCode merges each agent's own
+`permission` config *after* the global config and lets the agent's rule win,
+so a configured `OpenCodeAgentConfig[name].Permission` that sets
+`external_directory` (or the catch-all `*`) to anything other than `"allow"`
+would otherwise silently shadow the scoped `AdditionalWorkdirs` grant — and
+the `Yolo` blanket allow — for that agent. When `AdditionalWorkdirs` is
+non-empty, `PrepareLaunch` rejects any agent profile whose `Permission` does
+this, with an error naming the agent, the offending key, and the requested
+directories, rather than composing something whose precedence it can't
+guarantee. Agent permissions that don't touch `external_directory` or `*`
+pass through unchanged. This check is a no-op when `AdditionalWorkdirs` is
+empty.
+
 The normalized (absolute, cleaned, deduped) list is echoed back on
 `LaunchSpec.AdditionalWorkdirs` for caller visibility; no caller action is
 required to apply it (unlike `Workdir`), and it is applied identically on
