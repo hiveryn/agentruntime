@@ -116,6 +116,60 @@ func TestPrepareLaunchHTTPMCPAndAppendInstructions(t *testing.T) {
 	}
 }
 
+func TestPrepareLaunchForcesSessionPersistence(t *testing.T) {
+	adapter := New(Options{
+		NewSessionID: func() (string, error) { return "00000000-0000-4000-8000-000000000001", nil },
+	})
+	req := agentruntime.StartRequest{
+		ID:      "hiv-claude-persist",
+		Agent:   agentruntime.AgentClaude,
+		Workdir: "/tmp/work",
+		// Simulates a claude-work-* variant: a custom CLAUDE_CONFIG_DIR plus
+		// the daemon inheriting a Claude child-session marker from its own
+		// parent process.
+		Env: map[string]string{
+			"CLAUDE_CODE_CHILD_SESSION": "1",
+			"CLAUDE_CONFIG_DIR":         "/home/user/.claude-work",
+		},
+	}
+
+	spec, err := adapter.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if spec.Env["CLAUDE_CODE_FORCE_SESSION_PERSISTENCE"] != "1" {
+		t.Fatalf("CLAUDE_CODE_FORCE_SESSION_PERSISTENCE: %q", spec.Env["CLAUDE_CODE_FORCE_SESSION_PERSISTENCE"])
+	}
+	// Inherited marker is preserved as-is; the force flag is what neutralizes it.
+	if spec.Env["CLAUDE_CODE_CHILD_SESSION"] != "1" {
+		t.Fatalf("CLAUDE_CODE_CHILD_SESSION: %q", spec.Env["CLAUDE_CODE_CHILD_SESSION"])
+	}
+	// The profile's intentional CLAUDE_CONFIG_DIR must survive untouched.
+	if spec.Env["CLAUDE_CONFIG_DIR"] != "/home/user/.claude-work" {
+		t.Fatalf("CLAUDE_CONFIG_DIR: %q", spec.Env["CLAUDE_CONFIG_DIR"])
+	}
+}
+
+func TestPrepareLaunchForceSessionPersistenceNotOverridableByEnv(t *testing.T) {
+	adapter := New(Options{
+		NewSessionID: func() (string, error) { return "00000000-0000-4000-8000-000000000001", nil },
+	})
+	req := agentruntime.StartRequest{
+		ID:      "hiv-claude-persist-2",
+		Agent:   agentruntime.AgentClaude,
+		Workdir: "/tmp/work",
+		Env:     map[string]string{"CLAUDE_CODE_FORCE_SESSION_PERSISTENCE": "0"},
+	}
+
+	spec, err := adapter.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if spec.Env["CLAUDE_CODE_FORCE_SESSION_PERSISTENCE"] != "1" {
+		t.Fatalf("caller-supplied value must be overridden: got %q", spec.Env["CLAUDE_CODE_FORCE_SESSION_PERSISTENCE"])
+	}
+}
+
 func TestPrepareLaunchModel(t *testing.T) {
 	adapter := New(Options{
 		NewSessionID: func() (string, error) { return "00000000-0000-4000-8000-000000000001", nil },

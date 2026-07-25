@@ -156,6 +156,7 @@ When executing a `LaunchSpec`, callers must:
 |---------------------------|-------------------------|------------------------------------------------|
 | `AGENTRUNTIME_SESSION_ID` | Claude, Codex, OpenCode | Set to `StartRequest.ID`; rejected if conflicting |
 | `OPENCODE_CONFIG_CONTENT` | OpenCode                | Rejected if non-empty in `StartRequest.Env`     |
+| `CLAUDE_CODE_FORCE_SESSION_PERSISTENCE` | Claude    | Always forced to `"1"`, overriding any value in `StartRequest.Env`; counteracts an inherited `CLAUDE_CODE_CHILD_SESSION` marker disabling transcript persistence |
 
 ### Adapter-Managed Arguments
 

@@ -135,6 +135,13 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 
 	env := mergeEnv(req.Env, map[string]string{
 		"AGENTRUNTIME_SESSION_ID": req.ID,
+		// Callers may inherit CLAUDE_CODE_CHILD_SESSION=1 from a parent Claude
+		// process (e.g. the daemon itself running under a Claude session).
+		// Claude treats that as a signal to disable transcript persistence for
+		// its children, which breaks resume after a crash. Force persistence
+		// back on for every Hiveryn-launched session, independent of whatever
+		// the daemon process happened to inherit.
+		"CLAUDE_CODE_FORCE_SESSION_PERSISTENCE": "1",
 	})
 
 	return agentruntime.LaunchSpec{
