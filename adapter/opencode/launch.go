@@ -52,6 +52,10 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 	if err != nil {
 		return agentruntime.LaunchSpec{}, err
 	}
+	readOnlyPaths, err := agentruntime.NormalizeReadOnlyPaths(req.ReadOnlyPaths)
+	if err != nil {
+		return agentruntime.LaunchSpec{}, err
+	}
 	if req.Agent != "" && req.Agent != agentruntime.AgentOpenCode {
 		return agentruntime.LaunchSpec{}, fmt.Errorf("unsupported agent %q", req.Agent)
 	}
@@ -114,18 +118,17 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 	// config. There is no raw arg to conflict with, so nothing to reject here.
 	switch {
 	case req.Yolo:
-		// Blanket "allow" is already a superset of any per-directory
-		// external_directory grant, so additional workdirs need no separate
-		// entry here.
-		cfg.Permission = "allow"
+		// Read-only references require tool-specific edit denials layered over
+		// the blanket grant; without references the compact string form suffices.
+		if len(readOnlyPaths) == 0 {
+			cfg.Permission = "allow"
+		} else {
+			cfg.Permission = scopedPermissions(additionalWorkdirs, readOnlyPaths, true)
+		}
 	case len(additionalWorkdirs) > 0:
-		externalDir := make(map[string]string, len(additionalWorkdirs))
-		for _, dir := range additionalWorkdirs {
-			externalDir[dir+"/**"] = "allow"
-		}
-		cfg.Permission = map[string]any{
-			"external_directory": externalDir,
-		}
+		cfg.Permission = scopedPermissions(additionalWorkdirs, readOnlyPaths, false)
+	case len(readOnlyPaths) > 0:
+		cfg.Permission = scopedPermissions(nil, readOnlyPaths, false)
 	}
 
 	configJSON, err := json.Marshal(cfg)
@@ -196,8 +199,30 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 		Env:                env,
 		Workdir:            req.Workdir,
 		AdditionalWorkdirs: additionalWorkdirs,
+		ReadOnlyPaths:      readOnlyPaths,
 		CleanupPaths:       cleanupPaths,
 	}, nil
+}
+
+func scopedPermissions(writable, readOnly []string, yolo bool) map[string]any {
+	external := make(map[string]string, len(writable)+len(readOnly))
+	edit := make(map[string]string, len(readOnly))
+	for _, path := range writable {
+		external[path+"/**"] = "allow"
+	}
+	for _, path := range readOnly {
+		pattern := path
+		if info, err := os.Stat(path); err == nil && info.IsDir() {
+			pattern += "/**"
+		}
+		external[pattern] = "allow"
+		edit[pattern] = "deny"
+	}
+	permission := map[string]any{"external_directory": external, "edit": edit}
+	if yolo {
+		permission["*"] = "allow"
+	}
+	return permission
 }
 
 // checkAgentPermissionConflict rejects an OpenCode agent profile whose declared

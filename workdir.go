@@ -43,3 +43,21 @@ func NormalizeAdditionalWorkdirs(workdir string, dirs []string) ([]string, error
 
 	return out, nil
 }
+
+func NormalizeReadOnlyPaths(paths []string) ([]string, error) {
+	out := make([]string, 0, len(paths))
+	seen := make(map[string]int, len(paths))
+	for i, raw := range paths {
+		trimmed := strings.TrimSpace(raw)
+		if trimmed == "" || !filepath.IsAbs(trimmed) {
+			return nil, fmt.Errorf("read-only path at index %d must be a non-empty absolute path, got %q", i, raw)
+		}
+		clean := filepath.Clean(trimmed)
+		if first, ok := seen[clean]; ok {
+			return nil, fmt.Errorf("read-only path at index %d duplicates index %d after normalization (%q)", i, first, clean)
+		}
+		seen[clean] = i
+		out = append(out, clean)
+	}
+	return out, nil
+}

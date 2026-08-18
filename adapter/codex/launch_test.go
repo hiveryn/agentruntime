@@ -669,6 +669,13 @@ func TestPrepareLaunchAdditionalWorkdirs(t *testing.T) {
 	}
 }
 
+func TestPrepareLaunchRejectsReadOnlyPathsItCannotEnforce(t *testing.T) {
+	_, err := New(Options{}).PrepareLaunch(context.Background(), agentruntime.StartRequest{ID: "x", Agent: agentruntime.AgentCodex, Workdir: "/tmp", ReadOnlyPaths: []string{"/spec"}})
+	if err == nil || !strings.Contains(err.Error(), "cannot guarantee read-only access") {
+		t.Fatalf("error = %v", err)
+	}
+}
+
 func TestPrepareLaunchAdditionalWorkdirsManagedArgConflict(t *testing.T) {
 	adapter := New(DefaultOptions())
 	req := agentruntime.StartRequest{

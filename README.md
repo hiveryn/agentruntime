@@ -101,6 +101,10 @@ agentruntime.HookCommand{Endpoint: "http://127.0.0.1:9000"}
   `filepath.Clean`) — violations are rejected fail-fast via
   `NormalizeAdditionalWorkdirs`. Not resolved against `Workdir`. See
   [Additional Workdirs](#additional-workdirs).
+- **`ReadOnlyPaths`** — optional absolute files or directories that are context
+  only and must not widen write scope. OpenCode receives scoped external access
+  with edit denial. Claude and Codex reject non-empty values because their
+  adapters cannot currently guarantee the distinction.
 - **`Prompt`** — initial prompt when the runtime supports it.
 - **`Instructions`** — runtime-specific instruction/system-prompt input.
 - **`MCPServers`** — stdio or HTTP MCP servers synthesized into the runtime's
