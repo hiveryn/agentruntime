@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"os"
-	"strings"
 	"testing"
 
 	"github.com/hiveryn/agentruntime"
@@ -793,13 +792,6 @@ func TestPrepareLaunchAdditionalWorkdirs(t *testing.T) {
 	}
 	if len(spec.AdditionalWorkdirs) != 2 || spec.AdditionalWorkdirs[0] != "/repo-b" || spec.AdditionalWorkdirs[1] != "/repo-c" {
 		t.Fatalf("spec.AdditionalWorkdirs: %v", spec.AdditionalWorkdirs)
-	}
-}
-
-func TestPrepareLaunchRejectsReadOnlyPathsItCannotEnforce(t *testing.T) {
-	_, err := New(Options{}).PrepareLaunch(context.Background(), agentruntime.StartRequest{ID: "x", Agent: agentruntime.AgentClaude, Workdir: "/tmp", ReadOnlyPaths: []string{"/spec"}})
-	if err == nil || !strings.Contains(err.Error(), "cannot guarantee read-only access") {
-		t.Fatalf("error = %v", err)
 	}
 }
 

@@ -983,31 +983,6 @@ func TestPrepareLaunch_AdditionalWorkdirsNoYolo(t *testing.T) {
 	}
 }
 
-func TestPrepareLaunchReadOnlyPathGrant(t *testing.T) {
-	dir := t.TempDir()
-	file := dir + "/spec.md"
-	if err := os.WriteFile(file, []byte("spec"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	req := baseReq()
-	req.ReadOnlyPaths = []string{file, dir}
-	spec, err := New(Options{}).PrepareLaunch(context.Background(), req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	var cfg ocConfig
-	if err := json.Unmarshal([]byte(spec.Env["OPENCODE_CONFIG_CONTENT"]), &cfg); err != nil {
-		t.Fatal(err)
-	}
-	permission := cfg.Permission.(map[string]any)
-	if permission["external_directory"] == nil || permission["edit"] == nil {
-		t.Fatalf("permission = %#v", permission)
-	}
-	if len(spec.ReadOnlyPaths) != 2 {
-		t.Fatalf("read-only paths = %#v", spec.ReadOnlyPaths)
-	}
-}
-
 func TestPrepareLaunch_AdditionalWorkdirsWithYolo(t *testing.T) {
 	a := New(DefaultOptions())
 	req := baseReq()

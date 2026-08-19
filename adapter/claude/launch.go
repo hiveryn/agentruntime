@@ -33,9 +33,6 @@ var managedArgs = map[string]struct{}{
 }
 
 func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest) (agentruntime.LaunchSpec, error) {
-	if len(req.ReadOnlyPaths) > 0 {
-		return agentruntime.LaunchSpec{}, fmt.Errorf("claude adapter cannot guarantee read-only access for referenced paths %v", req.ReadOnlyPaths)
-	}
 	if req.ID == "" {
 		return agentruntime.LaunchSpec{}, fmt.Errorf("missing request ID")
 	}

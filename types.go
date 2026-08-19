@@ -59,15 +59,11 @@ type StartRequest struct {
 	// after filepath.Clean); NormalizeAdditionalWorkdirs enforces this. Not
 	// resolved against Workdir — relative paths are rejected, not joined.
 	AdditionalWorkdirs []string
-	// ReadOnlyPaths lists absolute files or directories that are relevant context
-	// but must never expand writable repository scope. Adapters must enforce the
-	// distinction or reject the launch explicitly.
-	ReadOnlyPaths []string
-	Prompt        string
-	Model         string  // Agent model selector, translated to the agent-specific flag (e.g. --model). Agent-specific value form (claude/codex: bare id; opencode: provider/model).
-	Yolo          bool    // Full autonomy: skip approvals/permission prompts. Translated to the agent-specific flag (claude --dangerously-skip-permissions, codex --dangerously-bypass-approvals-and-sandbox, opencode permission:allow).
-	Mode          Mode    // Execution mode (build or plan). Empty defaults to build. Plan is unsupported by codex.
-	RunMode       RunMode // Interactivity posture. Empty defaults to interactive. Headless runs the agent
+	Prompt             string
+	Model              string  // Agent model selector, translated to the agent-specific flag (e.g. --model). Agent-specific value form (claude/codex: bare id; opencode: provider/model).
+	Yolo               bool    // Full autonomy: skip approvals/permission prompts. Translated to the agent-specific flag (claude --dangerously-skip-permissions, codex --dangerously-bypass-approvals-and-sandbox, opencode permission:allow).
+	Mode               Mode    // Execution mode (build or plan). Empty defaults to build. Plan is unsupported by codex.
+	RunMode            RunMode // Interactivity posture. Empty defaults to interactive. Headless runs the agent
 	// non-interactively to completion and exits (claude --print, codex exec, opencode run); the consumer
 	// captures stdout and the exit code rather than a long-lived session.
 	Instructions        string
@@ -111,7 +107,6 @@ type LaunchSpec struct {
 	// action on this field to apply it (each adapter already encodes the grant
 	// into Args or Env) — surfaced for caller visibility/debugging.
 	AdditionalWorkdirs []string
-	ReadOnlyPaths      []string
 	CleanupPaths       []string
 	// NativeSessionID is the agent's own session identifier when it is known
 	// before launch. Claude mints its --session-id UUID in PrepareLaunch, so it
