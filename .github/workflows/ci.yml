@@ -17,7 +17,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        go: ["1.24.x"]
+        go: ["1.25.x"]
     steps:
       - uses: actions/checkout@v4
 
@@ -43,4 +43,4 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v7
         with:
-          version: v2.1.6
+          version: v2.8.0
