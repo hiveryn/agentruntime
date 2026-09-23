@@ -91,7 +91,7 @@ func (a *Adapter) ParseUsage(_ context.Context, transcriptPath string) (agentrun
 	if err != nil {
 		return agentruntime.Usage{}, fmt.Errorf("codex: open transcript: %w", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	scanner := bufio.NewScanner(file)
 	// The session_meta line embeds the full base instructions and exceeds the

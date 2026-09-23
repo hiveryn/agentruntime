@@ -69,7 +69,7 @@ func (a *Adapter) ParseUsage(_ context.Context, transcriptPath string) (agentrun
 	if err != nil {
 		return agentruntime.Usage{}, fmt.Errorf("claude: open transcript: %w", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	scanner := bufio.NewScanner(file)
 	// Transcript lines embed full message content and can be large; raise the

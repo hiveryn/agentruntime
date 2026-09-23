@@ -25,7 +25,7 @@ func newTestDB(t *testing.T, dir string) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 	stmts := []string{
 		`CREATE TABLE session (id TEXT PRIMARY KEY)`,
 		`CREATE TABLE message (id TEXT PRIMARY KEY, session_id TEXT NOT NULL, time_created INTEGER NOT NULL, data TEXT NOT NULL)`,
@@ -44,7 +44,7 @@ func insertSession(t *testing.T, dbPath, sessionID string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 	if _, err := db.Exec(`INSERT INTO session (id) VALUES (?)`, sessionID); err != nil {
 		t.Fatal(err)
 	}
@@ -73,7 +73,7 @@ func insertMessage(t *testing.T, dbPath, id, sessionID, role string, order int, 
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 	if _, err := db.Exec(
 		`INSERT INTO message (id, session_id, time_created, data) VALUES (?, ?, ?, ?)`,
 		id, sessionID, order, string(raw),
@@ -131,7 +131,7 @@ func TestParseUsageNestedModel(t *testing.T) {
 	if _, err := db.Exec(`INSERT INTO message (id, session_id, time_created, data) VALUES (?,?,?,?)`, "n1", sid, 1, data); err != nil {
 		t.Fatal(err)
 	}
-	db.Close()
+	_ = db.Close()
 
 	usage, err := New(DefaultOptions()).ParseUsage(context.Background(), dbPath+pathSep+sid)
 	if err != nil {
@@ -223,7 +223,7 @@ func TestParseUsageRealDB(t *testing.T) {
 	if err != nil {
 		t.Skipf("open real db: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	var (
 		sid                               string

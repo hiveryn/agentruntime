@@ -43,7 +43,7 @@ func (a *Adapter) LocateTranscript(_ context.Context, req agentruntime.LocateReq
 	if err != nil {
 		return "", fmt.Errorf("opencode: locate transcript: open db: %w", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	var exists int
 	row := db.QueryRow(`SELECT 1 FROM session WHERE id = ? LIMIT 1`, req.NativeSessionID)
@@ -97,13 +97,13 @@ func (a *Adapter) ParseUsage(_ context.Context, transcriptPath string) (agentrun
 	if err != nil {
 		return agentruntime.Usage{}, fmt.Errorf("opencode: parse usage: open db: %w", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	rows, err := db.Query(`SELECT data FROM message WHERE session_id = ? ORDER BY time_created ASC`, sessionID)
 	if err != nil {
 		return agentruntime.Usage{}, fmt.Errorf("opencode: parse usage: query messages: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var usage agentruntime.Usage
 	for rows.Next() {
