@@ -256,8 +256,8 @@ next status from the same native session means it was answered.
 ### Attention on screen
 
 Some prompts fire no hook: provider startup dialogs shown before
-`SessionStart`, and a resumed Codex conversation left waiting after an
-interrupted turn. Every adapter implements the optional
+`SessionStart`, and a resumed Codex or Claude conversation left waiting after
+an interrupted turn. Every adapter implements the optional
 `agentruntime.AttentionDetector`: `InspectScreen(lines)` takes the agent's
 rendered terminal screen (the caller owns the PTY and a terminal emulator) and
 returns an `*Attention` (`Reason`, `Message`) only for a provider dialog or
@@ -266,9 +266,9 @@ be detected. Idleness, silence or a missing hook are never reported as a wait.
 
 | Provider | Hook-reported prompts | Recognized on screen | Not detected |
 | --- | --- | --- | --- |
-| Claude Code | permission, elicitation | `folder_trust`, `bypass_permissions_warning` | a resumed conversation waiting at its prompt; other dialogs |
+| Claude Code | permission, elicitation | `folder_trust`, `bypass_permissions_warning`, `conversation_interrupted` (resumed after a cut-off tool call) | a resumed conversation whose interrupted reply was dropped or whose background command was stopped (no notice shown); other dialogs |
 | Codex | approval (`PermissionRequest`) | `folder_trust`, `conversation_interrupted` | other dialogs |
-| OpenCode | permission, `question` | nothing (no trust dialog) | dialogs such as its update prompt |
+| OpenCode | permission, `question` | nothing (no trust dialog; the update prompt does not block the agent) | a resumed session waiting after an interrupted turn (no notice shown); other dialogs |
 
 ### Ingestion Paths
 

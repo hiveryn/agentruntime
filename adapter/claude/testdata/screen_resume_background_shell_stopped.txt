@@ -1,0 +1,40 @@
+
+ ▐▛███▛█   Claude Code v2.1.281
+▝▜██████▀  Sonnet 5 · Claude Team
+  ▝▝ ▝▝    /tmp/demo/repo
+
+  Get to finished work sooner with Opus 5.5. Switch anytime with /model.
+
+❯ Use the Bash tool to run exactly: sleep 90 && echo done. Then reply FINISHED.
+
+  Ran 2 shell commands
+
+⏺ I've kicked off the command in the background and will let it run to completion.
+
+  Read 1 file
+
+⏺ Still waiting on the background sleep command to finish — I'll check back shortly.
+
+  Read 1 file
+
+⏺ Command hasn't completed yet — will check again after the next wakeup.
+
+⏺ Background shell command didn't finish before the previous session ended
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ 
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ⏵⏵ bypass permissions on (shift+tab to cycle) · ← for agents

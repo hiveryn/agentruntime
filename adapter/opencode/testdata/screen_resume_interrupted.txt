@@ -1,0 +1,40 @@
+
+  ┃
+  ┃  Run the shell command 'sleep 60 && echo done' and then reply with the word FINISHED.
+  ┃
+
+     + Thought: 744ms
+
+  ┃
+  ┃  ⠙ sleep 60 && echo done
+  ┃
+
+     ▣  Build · DeepSeek V4 Pr  Update Available                                     esc
+
+                                A new release v1.18.32 is available. Would you like to
+                                update now?
+
+
+                                                                          Skip  Confirm
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  ┃
+  ┃
+  ┃
+  ┃  Build · DeepSeek V4 Pro DeepSeek
+  ╹▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+                                                                                           tab agents  ctrl+p commands
+

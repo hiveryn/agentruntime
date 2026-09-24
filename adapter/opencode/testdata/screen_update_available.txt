@@ -1,0 +1,40 @@
+
+  ┃
+  ┃  Run the shell command 'ls' and then reply with the word PONG followed by the file names.
+  ┃
+
+  ┃
+  ┃  $ ls
+  ┃
+  ┃  README.md
+  ┃
+
+     PONG                       Update Available                                     esc
+     README.md
+                                A new release v1.18.32 is available. Would you like to
+     ▣  Build · DeepSeek V4 Pr  update now?
+
+
+                                                                          Skip  Confirm
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  ┃
+  ┃
+  ┃
+  ┃  Build · DeepSeek V4 Pro DeepSeek
+  ╹▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+                                                                                   10.4K (1%) · $0.00  ctrl+p commands
+
