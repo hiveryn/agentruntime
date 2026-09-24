@@ -171,3 +171,11 @@ type SetupResult struct {
 	Changed bool
 	Paths   []string
 }
+
+// Attention is one explicit, evidence-backed sign that the agent is waiting
+// for the user: Reason is a stable code (e.g. "folder_trust"), Message says in
+// words what the agent is asking.
+type Attention struct {
+	Reason  string
+	Message string
+}

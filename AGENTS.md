@@ -28,6 +28,8 @@
 - Codex `Stop` and OpenCode `session.idle` mean the turn is idle, not that the process exited.
 - OpenCode subagent events: only `session.created` carries `parent_session_id`; all subsequent subagent events (status, tool) leave `PrimaryNativeID` and `NativeSessionRole` unset so `ingest.Receiver` can classify them correctly from its stored mapping.
 - OpenCode `question` tool (`tool.execute.before`) maps to `awaiting_input`; it is the primary permission/confirmation mechanism when the native `permission.asked` event does not fire.
+- Codex `PermissionRequest` maps to `awaiting_input`: it fires as the approval prompt is shown.
+- `AttentionDetector` (optional, implemented by every adapter) recognizes prompts that fire no hook on the caller-rendered terminal screen: only a provider's own dialog/banner in its live position (anchored on its footer or on the composer), never idleness or silence. Screen fixtures are rendered from captured real-CLI output. `AttentionCoverage()` states per provider what is and is not detected; keep it and the README table in step with `InspectScreen`.
 
 ## Design Rules
 

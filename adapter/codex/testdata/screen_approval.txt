@@ -1,0 +1,37 @@
+╭───────────────────────────────────────────────────────╮
+│ >_ OpenAI Codex (v0.156.1)                            │
+│                                                       │
+│ model:     GPT-6-Astra   /model to change             │
+│ directory: /tmp/demo │
+╰───────────────────────────────────────────────────────╯
+
+  Tip: This is GPT-6, a new generation of intelligence. Astra is state-of-the-art in coding, computer use, science, and
+  professional work. Give it a hard problem, a half-formed idea, or anything you've been meaning to build. See where it
+  takes you.
+
+
+› Create a file named hello.txt containing hi using a shell command. Request escalation if the sandbox blocks it.
+
+
+• I’ll create hello.txt containing hi with a shell command.
+
+• Ran printf 'hi' > hello.txt
+  └ zsh:1: operation not permitted: hello.txt
+
+• Running printf 'hi' > hello.txt
+
+
+  Would you like to run the following command?
+
+  Environment: local
+
+  Reason: The read-only sandbox blocked creating hello.txt. Allow this shell command to create it containing hi?
+
+  $ printf 'hi' > hello.txt
+
+
+› 1. Yes, proceed (y)
+  2. Yes, and don't ask again for commands that start with `printf 'hi' > hello.txt` (p)
+  3. No, and tell Codex what to do differently (esc)
+
+  Press enter to confirm or esc to cancel

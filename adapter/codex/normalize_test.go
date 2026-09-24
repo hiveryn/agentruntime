@@ -98,7 +98,7 @@ func TestNormalizeDropsUnknownEvent(t *testing.T) {
 	}
 }
 
-func TestPermissionRequestMapsToWorking(t *testing.T) {
+func TestPermissionRequestMapsToAwaitingInput(t *testing.T) {
 	adapter := New(DefaultOptions())
 	data := []byte(`{"hook":{"hook_event_name":"PermissionRequest","session_id":"native-123","tool_name":"apply_patch"},"env":{"AGENTRUNTIME_SESSION_ID":"hiv-123"}}`)
 
@@ -106,7 +106,7 @@ func TestPermissionRequestMapsToWorking(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if event.Status != agentruntime.StatusWorking || event.Tool != "ApplyPatch" || event.ID != "hiv-123" {
+	if event.Status != agentruntime.StatusAwaitingInput || event.Tool != "ApplyPatch" || event.ID != "hiv-123" {
 		t.Fatalf("got %+v", event)
 	}
 }

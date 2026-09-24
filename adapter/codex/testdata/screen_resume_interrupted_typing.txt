@@ -1,0 +1,23 @@
+╭─────────────────────────────────────────────────────────╮
+│ >_ OpenAI Codex (v0.156.1)                              │
+│                                                         │
+│ model:       GPT-6-Astra   /model to change             │
+│ directory:   /tmp/demo │
+│ permissions: YOLO mode                                  │
+╰───────────────────────────────────────────��─────────────╯
+
+  Tip: Try the Desktop app. Run 'codex app' or visit https://chatgpt.com/codex?app-landing-page=true
+
+
+› Run the shell command 'sleep 60 && echo finished' and then tell me its output.
+
+
+• I’ll run the command and report its output when it finishes.
+
+■ Conversation interrupted - tell the model what to do differently. Something went wrong? Hit `/feedback` to report the
+issue.
+
+
+› Please just reply with the word done.
+
+  GPT-6-Astra default · /tmp/demo…

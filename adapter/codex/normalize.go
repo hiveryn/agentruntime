@@ -77,8 +77,12 @@ func codexStatus(name string) (agentruntime.Status, bool) {
 	switch name {
 	case "SessionStart":
 		return agentruntime.StatusStarting, true
-	case "UserPromptSubmit", "PreToolUse", "PermissionRequest", "PostToolUse":
+	case "UserPromptSubmit", "PreToolUse", "PostToolUse":
 		return agentruntime.StatusWorking, true
+	case "PermissionRequest":
+		// Fires as Codex is about to show its approval prompt; the next hook
+		// (PostToolUse or Stop) reports that the prompt was answered.
+		return agentruntime.StatusAwaitingInput, true
 	case "Stop":
 		return agentruntime.StatusIdle, true
 	default:

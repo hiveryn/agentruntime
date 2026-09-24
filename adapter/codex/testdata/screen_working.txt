@@ -1,0 +1,24 @@
+╭─────────────────────────────────────────────────────────╮
+│ >_ OpenAI Codex (v0.156.1)                              │
+│                                                         │
+│ model:       GPT-6-Astra   /model to change             │
+│ directory:   /tmp/demo │
+│ permissions: YOLO mode                                  │
+╰────────────────────────────────────────────────���────────╯
+
+  Tip: This is GPT-6, a new generation of intelligence. Astra is state-of-the-art in coding, computer use, science, and
+  professional work. Give it a hard problem, a half-formed idea, or anything you've been meaning to build. See where it
+  takes you.
+
+
+› Run the shell command 'sleep 60 && echo finished' and then tell me its output.
+
+
+• I’ll run the command and report its output when it finishes.
+
+Working (13s • esc to interrupt) · 1 background terminal running · /ps to view · /stop to close
+
+
+› Ask Codex to do anything
+
+  GPT-6-Astra default · /tmp/demo…
