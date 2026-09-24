@@ -266,7 +266,7 @@ be detected. Idleness, silence or a missing hook are never reported as a wait.
 
 | Provider | Hook-reported prompts | Recognized on screen | Not detected |
 | --- | --- | --- | --- |
-| Claude Code | permission, elicitation | `folder_trust`, `bypass_permissions_warning`, `conversation_interrupted` (resumed after a cut-off tool call) | a resumed conversation whose interrupted reply was dropped or whose background command was stopped (no notice shown); other dialogs |
+| Claude Code | permission, elicitation | `folder_trust`, `bypass_permissions_warning`, `conversation_interrupted` (resumed after being killed during a tool call) | a resumed conversation after a hangup-only exit, a dropped interrupted reply or a stopped background command (no notice shown); other dialogs |
 | Codex | approval (`PermissionRequest`) | `folder_trust`, `conversation_interrupted` | other dialogs |
 | OpenCode | permission, `question` | nothing (no trust dialog; the update prompt does not block the agent) | a resumed session waiting after an interrupted turn (no notice shown); other dialogs |
 

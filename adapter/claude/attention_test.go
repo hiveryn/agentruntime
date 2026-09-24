@@ -22,7 +22,8 @@ func TestInspectScreen(t *testing.T) {
 	}{
 		{"screen_folder_trust.txt", AttentionFolderTrust},
 		{"screen_bypass_permissions.txt", AttentionBypassPermissions},
-		// Killed during a foreground tool call, then resumed.
+		// Killed during a foreground tool call (as daemon shutdown does: PTY
+		// closed, then SIGKILL), then resumed.
 		{"screen_resume_interrupted.txt", AttentionConversationInterrupted},
 		// The same, while the composer's transient effort hint is still shown.
 		{"screen_resume_interrupted_effort_hint.txt", AttentionConversationInterrupted},
@@ -33,6 +34,10 @@ func TestInspectScreen(t *testing.T) {
 		// Killed while streaming a reply: Claude drops the partial reply and
 		// shows no notice, so the wait is not detectable.
 		{"screen_resume_after_streaming_kill.txt", ""},
+		// Only hung up (PTY closed, not killed) during the same tool call:
+		// Claude exits cleanly and resumes with no notice, so the wait is not
+		// detectable.
+		{"screen_resume_after_hangup.txt", ""},
 		// Killed with a background command running: the stopped-command notice
 		// is informational, not an interruption prompt.
 		{"screen_resume_background_shell_stopped.txt", ""},

@@ -24,7 +24,8 @@ const (
 
 // InspectScreen recognizes Claude Code's startup folder-trust dialog, its
 // Bypass Permissions warning, and a conversation left waiting after an
-// interrupted tool call. Permission and elicitation prompts are reported by
+// interrupted tool call. Claude shows that notice only when it was killed
+// mid-call; after a hangup alone it exits cleanly and resumes without one. Permission and elicitation prompts are reported by
 // hooks instead.
 func (a *Adapter) InspectScreen(lines []string) *agentruntime.Attention {
 	rows := screen.Rows(lines)
@@ -70,5 +71,5 @@ func isRule(row string) bool {
 
 // AttentionCoverage states what Claude Code waits are detected.
 func (a *Adapter) AttentionCoverage() string {
-	return "Claude Code: permission and elicitation prompts are detected from its hooks; the folder-trust and Bypass Permissions startup dialogs, and a resumed conversation waiting after an interrupted tool call, are recognized on the terminal screen. A resumed conversation whose interrupted reply was dropped, or whose background command was stopped, shows no interruption notice and is not detected; nor are other dialogs."
+	return "Claude Code: permission and elicitation prompts are detected from its hooks; the folder-trust and Bypass Permissions startup dialogs, and a resumed conversation waiting after an interrupted tool call, are recognized on the terminal screen. The notice is shown only when Claude was killed; a conversation resumed after Claude exited on hangup alone, or whose interrupted reply was dropped, or whose background command was stopped, shows no interruption notice and is not detected; nor are other dialogs."
 }
