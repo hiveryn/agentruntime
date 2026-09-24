@@ -14,9 +14,6 @@ func baseCfg(t *testing.T) agentruntime.SetupRequest {
 	t.Helper()
 	return agentruntime.SetupRequest{
 		Marker: "test-marker",
-		Hook: agentruntime.HookCommand{
-			Endpoint: "http://127.0.0.1:9000",
-		},
 	}
 }
 
@@ -53,8 +50,11 @@ func TestEnsureSetup_EmptyDir(t *testing.T) {
 	if !strings.Contains(content, "@agentruntime-marker: test-marker") {
 		t.Error("plugin missing agentruntime-marker")
 	}
-	if !strings.Contains(content, "http://127.0.0.1:9000/opencode") {
-		t.Error("plugin missing endpoint URL")
+	if !strings.Contains(content, "process.env?.AGENTRUNTIME_HOOK_ENDPOINT") || !strings.Contains(content, `endpoint + "/opencode"`) {
+		t.Error("plugin must resolve its endpoint from AGENTRUNTIME_HOOK_ENDPOINT")
+	}
+	if strings.Contains(content, "http://") {
+		t.Error("plugin must not embed a fixed endpoint")
 	}
 	if !strings.Contains(content, "AGENTRUNTIME_SESSION_ID") {
 		t.Error("plugin missing AGENTRUNTIME_SESSION_ID reference")
@@ -79,32 +79,34 @@ func TestEnsureSetup_Idempotent(t *testing.T) {
 	}
 }
 
-func TestEnsureSetup_EndpointChanged(t *testing.T) {
+func TestEnsureSetup_ReplacesLegacyEndpointPlugin(t *testing.T) {
 	a := New(DefaultOptions())
 	root := t.TempDir()
 	req := baseCfg(t)
 	req.ConfigRoot = root
 
-	if _, err := a.EnsureSetup(context.Background(), req); err != nil {
+	path := pluginPathForTest(root, req.Marker)
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	legacy := managedMarker + "\n// @agentruntime-marker: test-marker\nawait fetch(\"http://127.0.0.1:9000/opencode\")\n"
+	if err := os.WriteFile(path, []byte(legacy), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
-	req.Hook.Endpoint = "http://127.0.0.1:9001"
 	res, err := a.EnsureSetup(context.Background(), req)
 	if err != nil {
-		t.Fatalf("EnsureSetup with new endpoint: %v", err)
+		t.Fatalf("EnsureSetup: %v", err)
 	}
 	if !res.Changed {
-		t.Error("expected Changed=true when endpoint changed")
+		t.Error("expected Changed=true when replacing a legacy plugin")
 	}
-
-	path := pluginPathForTest(root, req.Marker)
 	data, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(data), "http://127.0.0.1:9001/opencode") {
-		t.Error("plugin not updated with new endpoint")
+	if strings.Contains(string(data), "127.0.0.1:9000") {
+		t.Error("legacy fixed endpoint not replaced")
 	}
 }
 
@@ -138,19 +140,6 @@ func TestEnsureSetup_MissingMarker(t *testing.T) {
 	_, err := a.EnsureSetup(context.Background(), req)
 	if err == nil {
 		t.Error("expected error for missing marker")
-	}
-}
-
-func TestEnsureSetup_MissingEndpoint(t *testing.T) {
-	a := New(DefaultOptions())
-	root := t.TempDir()
-	req := baseCfg(t)
-	req.ConfigRoot = root
-	req.Hook.Endpoint = ""
-
-	_, err := a.EnsureSetup(context.Background(), req)
-	if err == nil {
-		t.Error("expected error for missing hook endpoint")
 	}
 }
 

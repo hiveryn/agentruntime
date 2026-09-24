@@ -33,8 +33,10 @@ persistence, auth, product workflow, and any UI event stream.
 
 1. Create an adapter from `adapter/codex`, `adapter/claude`, or
    `adapter/opencode`.
-2. Call `EnsureSetup` with a persistent `SetupRequest.Marker` and hook target.
-3. Call `PrepareLaunch` with a `StartRequest`.
+2. Call `EnsureSetup` with a persistent `SetupRequest.Marker` and the adapter's
+   hook command.
+3. Call `PrepareLaunch` with a `StartRequest` whose `HookEndpoint` names your
+   receiver.
 4. Execute `LaunchSpec` with your own process or PTY manager: merge
    `LaunchSpec.Env`, run `LaunchSpec.Command` with `LaunchSpec.Args` as a direct
    `argv` array (lossless, never shell-join), and set the working directory to
@@ -43,8 +45,7 @@ persistence, auth, product workflow, and any UI event stream.
 
 ## Setup Details
 
-`EnsureSetup` is idempotent for the same marker and hook target. It writes
-marker-scoped files:
+`EnsureSetup` is idempotent for the same marker. It writes marker-scoped files:
 
 - Codex: `$CODEX_HOME/hooks.json` (default `~/.codex/hooks.json`)
 - Claude Code: `$CLAUDE_CONFIG_DIR/settings.json` (default `~/.claude/settings.json`)
@@ -67,22 +68,30 @@ markers. This is distinct from per-launch cleanup.
 files created by `PrepareLaunch` (Claude MCP config files, OpenCode instruction
 files).
 
-### Hook Commands
+### Hook Commands and Routing
+
+Installed hooks never embed an endpoint. Each session's receiver is set by
+`StartRequest.HookEndpoint`, which `PrepareLaunch` delivers as
+`LaunchSpec.Env["AGENTRUNTIME_HOOK_ENDPOINT"]`; hooks read it when an event
+fires. Several callers (for example daemons on different ports) can therefore
+install the same marker into one global config without redirecting each other's
+live sessions, and one caller stopping leaves the others' routing intact. A
+session launched without `HookEndpoint` posts nothing.
 
 Codex and Claude Code use self-contained Node.js hook commands that POST
-enveloped native hook JSON to your receiver:
+enveloped native hook JSON:
 
 ```go
-codex.HookCommand("http://127.0.0.1:9000")   // POSTs to /codex
-claude.HookCommand("http://127.0.0.1:9000")  // POSTs to /claude
+codex.HookCommand()   // POSTs to $AGENTRUNTIME_HOOK_ENDPOINT/codex
+claude.HookCommand()  // POSTs to $AGENTRUNTIME_HOOK_ENDPOINT/claude
 ```
 
-OpenCode writes a TypeScript plugin that POSTs to `<endpoint>/opencode` from
-within the runtime process. Use `HookCommand.Endpoint`:
+OpenCode writes a TypeScript plugin that POSTs to
+`$AGENTRUNTIME_HOOK_ENDPOINT/opencode` from within the runtime process; it
+ignores `SetupRequest.Hook`.
 
-```go
-agentruntime.HookCommand{Endpoint: "http://127.0.0.1:9000"}
-```
+Because the shared entry is caller-independent, only call `RemoveSetup` when
+every caller using the marker is being uninstalled.
 
 ## StartRequest Reference
 
@@ -93,6 +102,8 @@ agentruntime.HookCommand{Endpoint: "http://127.0.0.1:9000"}
   name.
 - **`Args`** — additional CLI arguments appended after synthesized arguments.
 - **`Env`** — optional extra environment for the launched process.
+- **`HookEndpoint`** — base URL this session's hooks POST events to; delivered
+  via `AGENTRUNTIME_HOOK_ENDPOINT`. Empty disables hook delivery.
 - **`Workdir`** — required working directory.
 - **`AdditionalWorkdirs`** — optional list of extra absolute directory paths the
   launched agent is granted write access to, alongside `Workdir` (e.g. other
@@ -155,6 +166,7 @@ When executing a `LaunchSpec`, callers must:
 | Key                       | Adapters                | Notes                                          |
 |---------------------------|-------------------------|------------------------------------------------|
 | `AGENTRUNTIME_SESSION_ID` | Claude, Codex, OpenCode | Set to `StartRequest.ID`; rejected if conflicting |
+| `AGENTRUNTIME_HOOK_ENDPOINT` | Claude, Codex, OpenCode | Set to `StartRequest.HookEndpoint` (`""` when empty, masking inherited values); rejected if conflicting |
 | `OPENCODE_CONFIG_CONTENT` | OpenCode                | Rejected if non-empty in `StartRequest.Env`     |
 | `CLAUDE_CODE_FORCE_SESSION_PERSISTENCE` | Claude    | Always forced to `"1"`, overriding any value in `StartRequest.Env`; counteracts an inherited `CLAUDE_CODE_CHILD_SESSION` marker disabling transcript persistence |
 
@@ -328,7 +340,7 @@ func main() {
 
 	_, err := adapter.EnsureSetup(ctx, agentruntime.SetupRequest{
 		Marker: "example",
-		Hook:  codex.HookCommand("http://127.0.0.1:9000"),
+		Hook:   codex.HookCommand(),
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -338,6 +350,7 @@ func main() {
 		ID:           "session-1",
 		Agent:        agentruntime.AgentCodex,
 		Env:          map[string]string{},
+		HookEndpoint: "http://127.0.0.1:9000",
 		Workdir:      "/tmp/work",
 		Instructions: "Be concise and prefer bullet points.",
 		Prompt:       "Summarize this repository.",
@@ -386,7 +399,7 @@ func main() {
 
 	_, err := adapter.EnsureSetup(ctx, agentruntime.SetupRequest{
 		Marker: "example",
-		Hook:  claude.HookCommand("http://127.0.0.1:9000"),
+		Hook:   claude.HookCommand(),
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -396,6 +409,7 @@ func main() {
 		ID:           "session-1",
 		Agent:        agentruntime.AgentClaude,
 		Env:          map[string]string{},
+		HookEndpoint: "http://127.0.0.1:9000",
 		Workdir:      "/tmp/work",
 		Instructions: "Be concise and prefer bullet points.",
 		Prompt:       "Summarize this repository.",
@@ -449,9 +463,6 @@ func main() {
 
 	_, err := adapter.EnsureSetup(ctx, agentruntime.SetupRequest{
 		Marker: "example",
-		Hook: agentruntime.HookCommand{
-			Endpoint: "http://127.0.0.1:9000",
-		},
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -461,6 +472,7 @@ func main() {
 		ID:           "session-1",
 		Agent:        agentruntime.AgentOpenCode,
 		Env:          map[string]string{},
+		HookEndpoint: "http://127.0.0.1:9000",
 		Workdir:      "/tmp/work",
 		Instructions: "Be concise and prefer bullet points.",
 		Prompt:       "Summarize this repository.",

@@ -78,7 +78,7 @@ func TestEnsureSetupCollapsesStrippedMarkerDuplicates(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	hook := HookCommand("http://127.0.0.1:4201/internal/agentruntime")
+	hook := HookCommand()
 	if !strings.Contains(hook.Command, managedHookSignature) {
 		t.Fatalf("expected generated command to contain signature %q", managedHookSignature)
 	}
@@ -211,5 +211,40 @@ func TestRemoveSetupOnlyRemovesMatchingMarker(t *testing.T) {
 	}
 	if !strings.Contains(string(data), "keep-me") {
 		t.Fatalf("expected non-matching marker to remain\n%s", data)
+	}
+}
+
+// TestEnsureSetupIsEndpointIndependent guards multi-daemon coexistence: the
+// installed entry carries no endpoint, so a second caller installing the same
+// marker leaves the config byte-identical instead of redirecting live sessions.
+func TestEnsureSetupIsEndpointIndependent(t *testing.T) {
+	adapter := New(DefaultOptions())
+	req := agentruntime.SetupRequest{Marker: "hiveryn-daemon", ConfigRoot: t.TempDir(), Hook: HookCommand()}
+
+	first, err := adapter.EnsureSetup(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	before, err := os.ReadFile(first.Paths[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(before), "http://") || !strings.Contains(string(before), agentruntime.HookEndpointEnv) {
+		t.Fatalf("installed hook must resolve its endpoint from %s\n%s", agentruntime.HookEndpointEnv, before)
+	}
+
+	second, err := adapter.EnsureSetup(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if second.Changed {
+		t.Fatal("expected a second caller's setup to leave the config unchanged")
+	}
+	after, err := os.ReadFile(first.Paths[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(after) != string(before) {
+		t.Fatalf("config changed on second setup\nbefore: %s\nafter: %s", before, after)
 	}
 }

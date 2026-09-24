@@ -129,12 +129,13 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 	}
 	args = append(args, req.Args...)
 
-	if v, ok := req.Env["AGENTRUNTIME_SESSION_ID"]; ok && v != "" && v != req.ID {
-		return agentruntime.LaunchSpec{}, fmt.Errorf("reserved env key AGENTRUNTIME_SESSION_ID is set to %q which conflicts with session ID %q", v, req.ID)
+	sessionEnv, err := agentruntime.SessionEnv(req)
+	if err != nil {
+		return agentruntime.LaunchSpec{}, err
 	}
 
-	env := mergeEnv(req.Env, map[string]string{
-		"AGENTRUNTIME_SESSION_ID": req.ID,
+	env := mergeEnv(req.Env, sessionEnv)
+	env = mergeEnv(env, map[string]string{
 		// Callers may inherit CLAUDE_CODE_CHILD_SESSION=1 from a parent Claude
 		// process (e.g. the daemon itself running under a Claude session).
 		// Claude treats that as a signal to disable transcript persistence for

@@ -172,14 +172,15 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 	}
 	args = append(args, req.Args...)
 
-	if v, ok := req.Env["AGENTRUNTIME_SESSION_ID"]; ok && v != "" && v != req.ID {
-		return agentruntime.LaunchSpec{}, fmt.Errorf("reserved env key AGENTRUNTIME_SESSION_ID is set to %q which conflicts with session ID %q", v, req.ID)
+	sessionEnv, err := agentruntime.SessionEnv(req)
+	if err != nil {
+		return agentruntime.LaunchSpec{}, err
 	}
 	if v, ok := req.Env["OPENCODE_CONFIG_CONTENT"]; ok && v != "" {
 		return agentruntime.LaunchSpec{}, fmt.Errorf("reserved env key OPENCODE_CONFIG_CONTENT is managed by the opencode adapter and must not be provided by the caller")
 	}
 
-	env := buildEnv(req.Env, req.ID, string(configJSON))
+	env := buildEnv(req.Env, sessionEnv, string(configJSON))
 
 	return agentruntime.LaunchSpec{
 		Command:            command,
@@ -283,9 +284,8 @@ func mapMCPServer(server agentruntime.MCPServerConfig) (ocMCPServer, error) {
 	return mapped, nil
 }
 
-func buildEnv(base map[string]string, id, configJSON string) map[string]string {
-	return mergeEnv(base, map[string]string{
-		"AGENTRUNTIME_SESSION_ID": id,
+func buildEnv(base, sessionEnv map[string]string, configJSON string) map[string]string {
+	return mergeEnv(mergeEnv(base, sessionEnv), map[string]string{
 		"OPENCODE_CONFIG_CONTENT": configJSON,
 	})
 }

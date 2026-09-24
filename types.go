@@ -71,6 +71,12 @@ type StartRequest struct {
 	OpenCodeAgentConfig map[string]OpenCodeAgentConfig // OpenCode agent profile definitions merged into OPENCODE_CONFIG_CONTENT
 	Resume              bool                           // Resume an existing session instead of starting a new one
 	ResumeID            string                         // Native session ID to resume; if empty, resumes the most recent session
+	// HookEndpoint is the base URL the session's installed hooks POST native
+	// events to (e.g. "<endpoint>/claude"). It is delivered through the
+	// HookEndpointEnv launch env, not the global hook config, so concurrent
+	// callers never redirect each other's sessions. Empty disables hook delivery
+	// for this session.
+	HookEndpoint string
 }
 
 // OpenCodeAgentConfig defines an OpenCode agent profile entry for the config agent section.
@@ -147,9 +153,10 @@ type MCPServerConfig struct {
 	BearerTokenEnvVar string
 }
 
+// HookCommand is the endpoint-independent command installed into a provider's
+// hook config. The endpoint is resolved per session from HookEndpointEnv.
 type HookCommand struct {
 	Command       string
-	Endpoint      string
 	Timeout       time.Duration
 	StatusMessage string
 }

@@ -784,3 +784,20 @@ func hasArg(args []string, want string) bool {
 	}
 	return false
 }
+
+func TestPrepareLaunchCarriesHookEndpointInEnv(t *testing.T) {
+	adapter := New(DefaultOptions())
+	req := agentruntime.StartRequest{ID: "session-1", Agent: agentruntime.AgentCodex, Workdir: "/tmp/work", HookEndpoint: "http://127.0.0.1:4201/internal/agentruntime"}
+	spec, err := adapter.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := spec.Env[agentruntime.HookEndpointEnv]; got != req.HookEndpoint {
+		t.Fatalf("%s: got %q want %q", agentruntime.HookEndpointEnv, got, req.HookEndpoint)
+	}
+
+	req.Env = map[string]string{agentruntime.HookEndpointEnv: "http://127.0.0.1:9999"}
+	if _, err := adapter.PrepareLaunch(context.Background(), req); err == nil {
+		t.Fatal("expected conflicting caller hook endpoint to be rejected")
+	}
+}

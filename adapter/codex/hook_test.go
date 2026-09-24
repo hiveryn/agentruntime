@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -27,12 +28,9 @@ func envWithoutAgentRuntimeSessionID() []string {
 }
 
 func TestHookCommandReturnsPopulatedHookCommand(t *testing.T) {
-	hc := HookCommand("http://127.0.0.1:9000")
+	hc := HookCommand()
 	if hc.Command == "" {
 		t.Fatal("expected non-empty command")
-	}
-	if hc.Endpoint != "http://127.0.0.1:9000" {
-		t.Fatalf("endpoint: %q", hc.Endpoint)
 	}
 	if hc.Timeout != 10*time.Second {
 		t.Fatalf("timeout: %v", hc.Timeout)
@@ -43,7 +41,7 @@ func TestHookCommandReturnsPopulatedHookCommand(t *testing.T) {
 }
 
 func TestHookCommandContainsExpectedComponents(t *testing.T) {
-	hc := HookCommand("http://127.0.0.1:9000")
+	hc := HookCommand()
 	cmd := hc.Command
 
 	for _, want := range []string{
@@ -55,7 +53,8 @@ func TestHookCommandContainsExpectedComponents(t *testing.T) {
 		"hook_cwd",
 		"hook:h",
 		"process.cwd()",
-		"http://127.0.0.1:9000/codex",
+		"AGENTRUNTIME_HOOK_ENDPOINT",
+		`+"/codex"`,
 	} {
 		if !strings.Contains(cmd, want) {
 			t.Errorf("command missing %q\n%s", want, cmd)
@@ -84,10 +83,10 @@ func TestHookCommandPostsCorrectEnvelope(t *testing.T) {
 	sessionID := "test-codex-session-42"
 	hookStdin := `{"hook_event_name":"SessionStart","session_id":"native-abc-123","source":"startup","model":"test-model","cwd":"/tmp/test"}`
 
-	hc := HookCommand(server.URL)
+	hc := HookCommand()
 
 	cmd := exec.Command("sh", "-c", hc.Command)
-	cmd.Env = append(os.Environ(), "AGENTRUNTIME_SESSION_ID="+sessionID)
+	cmd.Env = append(os.Environ(), "AGENTRUNTIME_SESSION_ID="+sessionID, "AGENTRUNTIME_HOOK_ENDPOINT="+server.URL)
 	cmd.Stdin = strings.NewReader(hookStdin)
 
 	if err := cmd.Run(); err != nil {
@@ -148,10 +147,10 @@ func TestHookCommandEnvelopeCorrelatesWithNormalizeEvent(t *testing.T) {
 
 	hookStdin := `{"hook_event_name":"SessionStart","session_id":"native-abc-456","source":"startup"}`
 
-	hc := HookCommand(server.URL)
+	hc := HookCommand()
 
 	cmd := exec.Command("sh", "-c", hc.Command)
-	cmd.Env = append(os.Environ(), "AGENTRUNTIME_SESSION_ID="+sessionID)
+	cmd.Env = append(os.Environ(), "AGENTRUNTIME_SESSION_ID="+sessionID, "AGENTRUNTIME_HOOK_ENDPOINT="+server.URL)
 	cmd.Stdin = strings.NewReader(hookStdin)
 
 	if err := cmd.Run(); err != nil {
@@ -195,10 +194,10 @@ func TestHookCommandPreservesToolNameForEnvelope(t *testing.T) {
 
 	hookStdin := `{"hook_event_name":"PreToolUse","session_id":"native-abc-789","tool_name":"Bash","tool_input":{"command":"echo hi"},"turn_id":"turn-1"}`
 
-	hc := HookCommand(server.URL)
+	hc := HookCommand()
 
 	cmd := exec.Command("sh", "-c", hc.Command)
-	cmd.Env = append(os.Environ(), "AGENTRUNTIME_SESSION_ID=correlate-codex-2")
+	cmd.Env = append(os.Environ(), "AGENTRUNTIME_SESSION_ID=correlate-codex-2", "AGENTRUNTIME_HOOK_ENDPOINT="+server.URL)
 	cmd.Stdin = strings.NewReader(hookStdin)
 
 	if err := cmd.Run(); err != nil {
@@ -239,10 +238,10 @@ func TestHookCommandFallsBackToNativeIDWhenCallerIDMissing(t *testing.T) {
 
 	hookStdin := `{"hook_event_name":"Stop","session_id":"native-fallback-1"}`
 
-	hc := HookCommand(server.URL)
+	hc := HookCommand()
 
 	cmd := exec.Command("sh", "-c", hc.Command)
-	cmd.Env = envWithoutAgentRuntimeSessionID()
+	cmd.Env = append(envWithoutAgentRuntimeSessionID(), "AGENTRUNTIME_HOOK_ENDPOINT="+server.URL)
 	cmd.Stdin = strings.NewReader(hookStdin)
 
 	if err := cmd.Run(); err != nil {
@@ -258,5 +257,68 @@ func TestHookCommandFallsBackToNativeIDWhenCallerIDMissing(t *testing.T) {
 	}
 	if event.ID != "native-fallback-1" {
 		t.Errorf("ID: got %q want native-fallback-1", event.ID)
+	}
+}
+
+func envWithoutHookEndpoint() []string {
+	var filtered []string
+	for _, entry := range os.Environ() {
+		if !strings.HasPrefix(entry, agentruntime.HookEndpointEnv+"=") {
+			filtered = append(filtered, entry)
+		}
+	}
+	return filtered
+}
+
+// TestHookCommandRoutesBySessionEndpoint runs one installed command for two
+// sessions of two callers: each caller receives only its own session's event.
+func TestHookCommandRoutesBySessionEndpoint(t *testing.T) {
+	if _, err := exec.LookPath("node"); err != nil {
+		t.Skip("node not available")
+	}
+
+	var mu sync.Mutex
+	newServer := func() (*httptest.Server, *[]string) {
+		var sessions []string
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			var envelope struct {
+				Env map[string]string `json:"env"`
+			}
+			body, _ := io.ReadAll(r.Body)
+			_ = json.Unmarshal(body, &envelope)
+			mu.Lock()
+			sessions = append(sessions, envelope.Env["AGENTRUNTIME_SESSION_ID"])
+			mu.Unlock()
+			w.WriteHeader(http.StatusOK)
+		}))
+		return server, &sessions
+	}
+	serverA, gotA := newServer()
+	defer serverA.Close()
+	serverB, gotB := newServer()
+	defer serverB.Close()
+
+	hc := HookCommand()
+	run := func(env []string) {
+		t.Helper()
+		cmd := exec.Command("sh", "-c", hc.Command)
+		cmd.Env = env
+		cmd.Stdin = strings.NewReader(`{"hook_event_name":"Stop","session_id":"native-1"}`)
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("hook command failed: %v", err)
+		}
+	}
+	run(append(envWithoutHookEndpoint(), "AGENTRUNTIME_SESSION_ID=session-a", agentruntime.HookEndpointEnv+"="+serverA.URL))
+	run(append(envWithoutHookEndpoint(), "AGENTRUNTIME_SESSION_ID=session-b", agentruntime.HookEndpointEnv+"="+serverB.URL))
+	run(append(envWithoutHookEndpoint(), "AGENTRUNTIME_SESSION_ID=unrouted"))
+
+	mu.Lock()
+	defer mu.Unlock()
+
+	if len(*gotA) != 1 || (*gotA)[0] != "session-a" {
+		t.Fatalf("caller A received %v, want [session-a]", *gotA)
+	}
+	if len(*gotB) != 1 || (*gotB)[0] != "session-b" {
+		t.Fatalf("caller B received %v, want [session-b]", *gotB)
 	}
 }

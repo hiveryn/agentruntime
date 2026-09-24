@@ -63,19 +63,21 @@ func (a *Adapter) EnsureSetup(_ context.Context, req agentruntime.SetupRequest) 
 		}
 		state = map[string]any{}
 	}
-	before, _ := json.Marshal(state)
+	before, _ := json.MarshalIndent(state, "", "  ")
 
 	installHookCommand(state, req.Marker, req.Hook)
 
 	after, _ := json.MarshalIndent(state, "", "  ")
+	// Skip semantically unchanged writes so concurrent callers do not race
+	// read-modify-write cycles on a config file the agent also owns.
+	if bytes.Equal(before, after) {
+		return agentruntime.SetupResult{Paths: []string{path}}, nil
+	}
 	if err := os.WriteFile(path, after, 0o600); err != nil {
 		return agentruntime.SetupResult{}, err
 	}
 
-	return agentruntime.SetupResult{
-		Changed: !bytes.Equal(bytes.TrimSpace(before), bytes.TrimSpace(after)),
-		Paths:   []string{path},
-	}, nil
+	return agentruntime.SetupResult{Changed: true, Paths: []string{path}}, nil
 }
 
 func (a *Adapter) RemoveSetup(_ context.Context, req agentruntime.SetupRequest) (agentruntime.SetupResult, error) {
@@ -95,19 +97,21 @@ func (a *Adapter) RemoveSetup(_ context.Context, req agentruntime.SetupRequest) 
 		}
 		return agentruntime.SetupResult{}, err
 	}
-	before, _ := json.Marshal(state)
+	before, _ := json.MarshalIndent(state, "", "  ")
 
 	removeHookCommand(state, req.Marker)
 
 	after, _ := json.MarshalIndent(state, "", "  ")
+	// Skip semantically unchanged writes so concurrent callers do not race
+	// read-modify-write cycles on a config file the agent also owns.
+	if bytes.Equal(before, after) {
+		return agentruntime.SetupResult{Paths: []string{path}}, nil
+	}
 	if err := os.WriteFile(path, after, 0o600); err != nil {
 		return agentruntime.SetupResult{}, err
 	}
 
-	return agentruntime.SetupResult{
-		Changed: !bytes.Equal(bytes.TrimSpace(before), bytes.TrimSpace(after)),
-		Paths:   []string{path},
-	}, nil
+	return agentruntime.SetupResult{Changed: true, Paths: []string{path}}, nil
 }
 
 func installHookCommand(root map[string]any, marker string, hook agentruntime.HookCommand) {
