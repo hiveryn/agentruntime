@@ -1,0 +1,1 @@
+{"mcp":{"probe":{"type":"local","command":["/Users/kareemelbahrawy/.nvm/versions/node/v22.14.0/bin/node","/Users/kareemelbahrawy/hiveryn/agentruntime/research/2026-09-29-mcp-long-wait/probe-server.mjs"],"environment":{"PROBE_LOG":"/Users/kareemelbahrawy/hiveryn/agentruntime/research/2026-09-29-mcp-long-wait/runs/opencode-tui-esc/server.jsonl"},"timeout":3900000}}}

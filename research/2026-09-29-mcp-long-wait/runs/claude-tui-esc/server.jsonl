@@ -1,0 +1,8 @@
+{"at":"2026-09-29T04:15:01.173Z","t":"0.0","pid":63775,"event":"server_start","argv":[]}
+{"at":"2026-09-29T04:15:01.174Z","t":"0.0","pid":63775,"event":"recv","method":"initialize","id":0}
+{"at":"2026-09-29T04:15:01.199Z","t":"0.0","pid":63775,"event":"recv","method":"notifications/initialized","id":null}
+{"at":"2026-09-29T04:15:01.199Z","t":"0.0","pid":63775,"event":"recv","method":"tools/list","id":1}
+{"at":"2026-09-29T04:15:04.815Z","t":"3.6","pid":63775,"event":"recv","method":"tools/call","id":2,"params":{"name":"wait_probe","arguments":{"seconds":300,"progress_every":0},"_meta":{"claudecode/toolUseId":"toolu_01CAm5HbBmFFc9znseeq6DD3","progressToken":2}}}
+{"at":"2026-09-29T04:15:04.815Z","t":"3.6","pid":63775,"event":"call_start","id":2,"seconds":300,"every":0,"progressToken":2}
+{"at":"2026-09-29T04:15:25.842Z","t":"24.7","pid":63775,"event":"recv","method":"notifications/cancelled","id":null,"params":{"requestId":2,"reason":"AbortError: user-cancel"}}
+{"at":"2026-09-29T04:15:25.844Z","t":"24.7","pid":63775,"event":"call_cancelled","id":2,"elapsed":"21.0","reason":"AbortError: user-cancel"}

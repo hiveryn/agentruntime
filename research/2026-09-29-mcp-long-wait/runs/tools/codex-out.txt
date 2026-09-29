@@ -1,0 +1,353 @@
+Reading additional input from stdin...
+OpenAI Codex v0.158.0
+--------
+workdir: /Users/kareemelbahrawy/hiveryn/agentruntime/research/2026-09-29-mcp-long-wait/runs/tools/w
+model: gpt-6-astra
+provider: cap
+approval: never
+sandbox: read-only
+reasoning effort: medium
+reasoning summaries: none
+session id: 01a0eb55-7969-7c31-9568-d70864217c20
+--------
+user
+hi
+hook: SessionStart
+hook: SessionStart Completed
+hook: UserPromptSubmit
+hook: UserPromptSubmit Completed
+ERROR: {"type":"error","error":{"type":"invalid_request_error","message":"capture-server: request recorded"}}
+ERROR: {"type":"error","error":{"type":"invalid_request_error","message":"capture-server: request recorded"}}
+Reading additional input from stdin...
+OpenAI Codex v0.158.0
+--------
+workdir: /Users/kareemelbahrawy/hiveryn/agentruntime/research/2026-09-29-mcp-long-wait/runs/tools/w
+model: gpt-6-astra
+provider: cap
+approval: never
+sandbox: read-only
+reasoning effort: medium
+reasoning summaries: none
+session id: 01a0eb55-9830-7732-9a42-3074da26fcba
+--------
+user
+hi
+warning: Under-development features enabled: default_mode_request_user_input. Under-development features are incomplete and may behave unpredictably. To suppress this warning, set `suppress_unstable_features_warning = true` in /Users/kareemelbahrawy/.codex/config.toml.
+hook: SessionStart
+hook: SessionStart Completed
+hook: UserPromptSubmit
+hook: UserPromptSubmit Completed
+ERROR: {"type":"error","error":{"type":"invalid_request_error","message":"capture-server: request recorded"}}
+ERROR: {"type":"error","error":{"type":"invalid_request_error","message":"capture-server: request recorded"}}
+Reading additional input from stdin...
+OpenAI Codex v0.158.0
+--------
+workdir: /Users/kareemelbahrawy/hiveryn/agentruntime/research/2026-09-29-mcp-long-wait/runs/tools/w
+model: gpt-6-astra
+provider: cap
+approval: never
+sandbox: read-only
+reasoning effort: medium
+reasoning summaries: none
+session id: 01a0eb55-cbc5-76f0-a35c-cc255b6a4fb9
+--------
+user
+hi
+hook: SessionStart
+hook: SessionStart Completed
+hook: UserPromptSubmit
+hook: UserPromptSubmit Completed
+ERROR: {"type":"error","error":{"type":"invalid_request_error","message":"capture-server: request recorded"}}
+ERROR: {"type":"error","error":{"type":"invalid_request_error","message":"capture-server: request recorded"}}
+Reading additional input from stdin...
+OpenAI Codex v0.158.0
+--------
+workdir: /Users/kareemelbahrawy/hiveryn/agentruntime/research/2026-09-29-mcp-long-wait/runs/tools/w
+model: gpt-6-astra
+provider: cap
+approval: never
+sandbox: read-only
+reasoning effort: medium
+reasoning summaries: none
+session id: 01a0eb55-e8c6-7423-b8e1-e99f9563f696
+--------
+user
+hi
+warning: Under-development features enabled: default_mode_request_user_input. Under-development features are incomplete and may behave unpredictably. To suppress this warning, set `suppress_unstable_features_warning = true` in /Users/kareemelbahrawy/.codex/config.toml.
+hook: SessionStart
+hook: SessionStart Completed
+hook: UserPromptSubmit
+hook: UserPromptSubmit Completed
+ERROR: {"type":"error","error":{"type":"invalid_request_error","message":"capture-server: request recorded"}}
+ERROR: {"type":"error","error":{"type":"invalid_request_error","message":"capture-server: request recorded"}}
+Reading additional input from stdin...
+OpenAI Codex v0.158.0
+--------
+workdir: /Users/kareemelbahrawy/hiveryn/agentruntime/research/2026-09-29-mcp-long-wait/runs/tools/w
+model: gpt-6-astra
+provider: cap
+approval: never
+sandbox: read-only
+reasoning effort: medium
+reasoning summaries: none
+session id: 01a0eb56-24ee-7c43-a1fe-999d83c129be
+--------
+user
+hi
+hook: SessionStart
+hook: SessionStart Completed
+hook: UserPromptSubmit
+hook: UserPromptSubmit Completed
+ERROR: {"type":"error","error":{"type":"invalid_request_error","message":"capture-server: request recorded"}}
+ERROR: {"type":"error","error":{"type":"invalid_request_error","message":"capture-server: request recorded"}}
+Reading additional input from stdin...
+OpenAI Codex v0.158.0
+--------
+workdir: /Users/kareemelbahrawy/hiveryn/agentruntime/research/2026-09-29-mcp-long-wait/runs/tools/w
+model: gpt-6-astra
+provider: cap
+approval: never
+sandbox: read-only
+reasoning effort: medium
+reasoning summaries: none
+session id: 01a0eb56-d3c7-7612-ab16-e8bc0d8df708
+--------
+user
+hi
+hook: SessionStart
+hook: SessionStart Completed
+hook: UserPromptSubmit
+hook: UserPromptSubmit Completed
+ERROR: {"type":"error","error":{"type":"invalid_request_error","message":"capture-server: request recorded"}}
+ERROR: {"type":"error","error":{"type":"invalid_request_error","message":"capture-server: request recorded"}}
+Reading additional input from stdin...
+OpenAI Codex v0.158.0
+--------
+workdir: /Users/kareemelbahrawy/hiveryn/agentruntime/research/2026-09-29-mcp-long-wait/runs/tools/w
+model: gpt-6-astra
+provider: cap
+approval: never
+sandbox: read-only
+reasoning effort: medium
+reasoning summaries: none
+session id: 01a0eb56-f33f-7a42-a90e-9def72e625ef
+--------
+user
+hi
+hook: SessionStart
+hook: SessionStart Completed
+hook: UserPromptSubmit
+hook: UserPromptSubmit Completed
+ERROR: {"type":"error","error":{"type":"invalid_request_error","message":"capture-server: request recorded"}}
+ERROR: {"type":"error","error":{"type":"invalid_request_error","message":"capture-server: request recorded"}}
+Reading additional input from stdin...
+OpenAI Codex v0.158.0
+--------
+workdir: /Users/kareemelbahrawy/hiveryn/agentruntime/research/2026-09-29-mcp-long-wait/runs/tools/w
+model: gpt-6-astra
+provider: cap
+approval: never
+sandbox: read-only
+reasoning effort: medium
+reasoning summaries: none
+session id: 01a0eb57-1099-75a3-a060-a3160c549e85
+--------
+user
+hi
+warning: Code Mode is unavailable because code-mode host is disabled. Code mode will fail closed; enable `features.code_mode_host` and install `codex-code-mode-host`.
+hook: SessionStart
+hook: SessionStart Completed
+hook: UserPromptSubmit
+hook: UserPromptSubmit Completed
+ERROR: {"type":"error","error":{"type":"invalid_request_error","message":"capture-server: request recorded"}}
+ERROR: {"type":"error","error":{"type":"invalid_request_error","message":"capture-server: request recorded"}}
+Reading additional input from stdin...
+OpenAI Codex v0.158.0
+--------
+workdir: /Users/kareemelbahrawy/hiveryn/agentruntime/research/2026-09-29-mcp-long-wait/runs/tools/w
+model: gpt-6-astra
+provider: cap
+approval: never
+sandbox: read-only
+reasoning effort: medium
+reasoning summaries: none
+session id: 01a0eb57-6dec-7833-b675-3c328a96dcb1
+--------
+user
+hi
+warning: Codex is ignoring 1 unrecognized configuration setting. Check for typos or deprecated settings.
+  session-flags: `tools.request_user_input` is ignored.
+warning: Codex is ignoring 1 unrecognized configuration setting. Check for typos or deprecated settings.
+  session-flags: `tools.request_user_input` is ignored.
+hook: SessionStart
+hook: SessionStart Completed
+hook: UserPromptSubmit
+hook: UserPromptSubmit Completed
+ERROR: {"type":"error","error":{"type":"invalid_request_error","message":"capture-server: request recorded"}}
+ERROR: {"type":"error","error":{"type":"invalid_request_error","message":"capture-server: request recorded"}}
+Reading additional input from stdin...
+OpenAI Codex v0.158.0
+--------
+workdir: /Users/kareemelbahrawy/hiveryn/agentruntime/research/2026-09-29-mcp-long-wait/runs/tools/w
+model: gpt-6-astra
+provider: cap
+approval: never
+sandbox: read-only
+reasoning effort: medium
+reasoning summaries: none
+session id: 01a0eb57-8bb4-79f2-bd8b-a3e90de154e5
+--------
+user
+hi
+warning: Codex is ignoring 1 unrecognized configuration setting. Check for typos or deprecated settings.
+  session-flags: `features.request_user_input` is ignored.
+warning: Codex is ignoring 1 unrecognized configuration setting. Check for typos or deprecated settings.
+  session-flags: `features.request_user_input` is ignored.
+hook: SessionStart
+hook: SessionStart Completed
+hook: UserPromptSubmit
+hook: UserPromptSubmit Completed
+ERROR: {"type":"error","error":{"type":"invalid_request_error","message":"capture-server: request recorded"}}
+ERROR: {"type":"error","error":{"type":"invalid_request_error","message":"capture-server: request recorded"}}
+Reading additional input from stdin...
+OpenAI Codex v0.158.0
+--------
+workdir: /Users/kareemelbahrawy/hiveryn/agentruntime/research/2026-09-29-mcp-long-wait/runs/tools/w
+model: gpt-6-astra
+provider: cap
+approval: never
+sandbox: read-only
+reasoning effort: medium
+reasoning summaries: none
+session id: 01a0eb57-aa1e-7c12-a742-ec7a022cba36
+--------
+user
+hi
+hook: SessionStart
+hook: SessionStart Completed
+hook: UserPromptSubmit
+hook: UserPromptSubmit Completed
+ERROR: {"type":"error","error":{"type":"invalid_request_error","message":"capture-server: request recorded"}}
+ERROR: {"type":"error","error":{"type":"invalid_request_error","message":"capture-server: request recorded"}}
+Reading additional input from stdin...
+OpenAI Codex v0.158.0
+--------
+workdir: /Users/kareemelbahrawy/hiveryn/agentruntime/research/2026-09-29-mcp-long-wait/runs/tools/w
+model: gpt-6-astra
+provider: cap
+approval: never
+sandbox: read-only
+reasoning effort: medium
+reasoning summaries: none
+session id: 01a0eb57-c77b-7273-82a5-87712adb0adb
+--------
+user
+hi
+hook: SessionStart
+hook: SessionStart Completed
+hook: UserPromptSubmit
+hook: UserPromptSubmit Completed
+ERROR: {"type":"error","error":{"type":"invalid_request_error","message":"capture-server: request recorded"}}
+ERROR: {"type":"error","error":{"type":"invalid_request_error","message":"capture-server: request recorded"}}
+Reading additional input from stdin...
+OpenAI Codex v0.158.0
+--------
+workdir: /Users/kareemelbahrawy/hiveryn/agentruntime/research/2026-09-29-mcp-long-wait/runs/tools/w
+model: gpt-6-astra
+provider: cap
+approval: never
+sandbox: read-only
+reasoning effort: medium
+reasoning summaries: none
+session id: 01a0eb58-cfdb-7f82-a40c-9a4438234f15
+--------
+user
+hi
+hook: SessionStart
+hook: SessionStart Completed
+hook: UserPromptSubmit
+hook: UserPromptSubmit Completed
+ERROR: {"type":"error","error":{"type":"invalid_request_error","message":"capture-server: request recorded"}}
+ERROR: {"type":"error","error":{"type":"invalid_request_error","message":"capture-server: request recorded"}}
+Reading additional input from stdin...
+OpenAI Codex v0.158.0
+--------
+workdir: /Users/kareemelbahrawy/hiveryn/agentruntime/research/2026-09-29-mcp-long-wait/runs/tools/w
+model: gpt-6-astra
+provider: cap
+approval: never
+sandbox: read-only
+reasoning effort: medium
+reasoning summaries: none
+session id: 01a0eb59-a02e-7352-8747-08aa3d876025
+--------
+user
+hi
+warning: Code Mode is unavailable because code-mode host is disabled. Code mode will fail closed; enable `features.code_mode_host` and install `codex-code-mode-host`.
+hook: SessionStart
+hook: SessionStart Completed
+hook: UserPromptSubmit
+hook: UserPromptSubmit Completed
+ERROR: {"type":"error","error":{"type":"invalid_request_error","message":"capture-server: request recorded"}}
+ERROR: {"type":"error","error":{"type":"invalid_request_error","message":"capture-server: request recorded"}}
+Reading additional input from stdin...
+OpenAI Codex v0.158.0
+--------
+workdir: /Users/kareemelbahrawy/hiveryn/agentruntime/research/2026-09-29-mcp-long-wait/runs/tools/w
+model: gpt-6-astra
+provider: cap
+approval: never
+sandbox: read-only
+reasoning effort: medium
+reasoning summaries: none
+session id: 01a0eb59-bfb4-7dd2-a38e-2c6fe9579899
+--------
+user
+hi
+warning: Code Mode is unavailable because code-mode host is disabled. Code mode will fail closed; enable `features.code_mode_host` and install `codex-code-mode-host`.
+hook: SessionStart
+hook: SessionStart Completed
+hook: UserPromptSubmit
+hook: UserPromptSubmit Completed
+ERROR: {"type":"error","error":{"type":"invalid_request_error","message":"capture-server: request recorded"}}
+ERROR: {"type":"error","error":{"type":"invalid_request_error","message":"capture-server: request recorded"}}
+Reading additional input from stdin...
+OpenAI Codex v0.158.0
+--------
+workdir: /Users/kareemelbahrawy/hiveryn/agentruntime/research/2026-09-29-mcp-long-wait/runs/tools/w
+model: gpt-5.5
+provider: cap
+approval: never
+sandbox: read-only
+reasoning effort: medium
+reasoning summaries: none
+session id: 01a0eb59-de1b-70d3-80ad-cf2b3c254739
+--------
+user
+hi
+hook: SessionStart
+hook: SessionStart Completed
+hook: UserPromptSubmit
+hook: UserPromptSubmit Completed
+ERROR: {"type":"error","error":{"type":"invalid_request_error","message":"capture-server: request recorded"}}
+ERROR: {"type":"error","error":{"type":"invalid_request_error","message":"capture-server: request recorded"}}
+Reading additional input from stdin...
+OpenAI Codex v0.158.0
+--------
+workdir: /Users/kareemelbahrawy/hiveryn/agentruntime/research/2026-09-29-mcp-long-wait/runs/tools/w
+model: gpt-5.5
+provider: cap
+approval: never
+sandbox: read-only
+reasoning effort: medium
+reasoning summaries: none
+session id: 01a0eb65-46ba-7a10-8bf8-17c351a17305
+--------
+user
+hi
+hook: SessionStart
+hook: SessionStart Completed
+hook: UserPromptSubmit
+hook: UserPromptSubmit Completed
+ERROR: {"type":"error","error":{"type":"invalid_request_error","message":"capture-server: request recorded"}}
+ERROR: {"type":"error","error":{"type":"invalid_request_error","message":"capture-server: request recorded"}}

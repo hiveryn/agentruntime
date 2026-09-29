@@ -1,0 +1,13 @@
+ ▐▛███▛█   Claude Code v2.1.284
+▝▜██████▀  Sonnet 5.5 · Claude Team
+ ▝▝   ▝▝   ~/hiveryn/agentruntime/research/2026-09-29-mcp-long-wait/runs/claude-tui-h1-servertimeout/work
+⏺ agents-md: no CLAUDE.md found; AGENTS.md loaded: /Users/kareemelbahrawy/hiveryn/agentruntime/AGENTS.md
+❯ Call the MCP tool wait_probe exactly once with arguments {"seconds": 3600, "progress_every": 0}. Do not call any other tool, do not poll, and do not check on it. When it returns, reply with exactly the text it
+  returned; if it fails or times out, reply with the exact error text you received.
+  Called probe
+⏺ PROBE_DONE after 3600.0s
+✻ Worked for 1h 0m 6s · done 3:33 PM
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ 
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ⏵⏵ auto mode on (shift+tab to cycle) · ← for agents

@@ -1,0 +1,1 @@
+{"mcpServers":{"probe":{"type":"stdio","command":"/Users/kareemelbahrawy/.nvm/versions/node/v22.14.0/bin/node","args":["/Users/kareemelbahrawy/hiveryn/agentruntime/research/2026-09-29-mcp-long-wait/probe-server.mjs"],"env":{"PROBE_LOG":"/Users/kareemelbahrawy/hiveryn/agentruntime/research/2026-09-29-mcp-long-wait/runs/claude-tui-bg150/server.jsonl"}}}}

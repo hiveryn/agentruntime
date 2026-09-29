@@ -1,0 +1,1 @@
+{"model":"cap/m","provider":{"cap":{"npm":"@ai-sdk/openai-compatible","options":{"baseURL":"http://127.0.0.1:18765/v1","apiKey":"dummy"},"models":{"m":{}}}},"permission":"allow","mcp":{"probe":{"type":"local","command":["/Users/kareemelbahrawy/.nvm/versions/node/v22.14.0/bin/node","/Users/kareemelbahrawy/hiveryn/agentruntime/research/2026-09-29-mcp-long-wait/probe-server.mjs"]}}}

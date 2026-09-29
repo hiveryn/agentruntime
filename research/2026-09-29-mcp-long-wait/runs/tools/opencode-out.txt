@@ -1,0 +1,8 @@
+[0m
+> build · m
+[0m
+[91m[1mError: [0mcapture-server: request recorded
+[0m
+> build · m
+[0m
+[91m[1mError: [0mcapture-server: request recorded

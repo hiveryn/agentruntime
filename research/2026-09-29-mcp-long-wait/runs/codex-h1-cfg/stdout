@@ -1,0 +1,7 @@
+{"type":"thread.started","thread_id":"01a0eb51-c9e8-79e2-9edb-4df400c1336c"}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_0","type":"agent_message","text":"I’ll call `wait_probe` once with the specified arguments."}}
+{"type":"item.started","item":{"id":"item_1","type":"mcp_tool_call","server":"probe","tool":"wait_probe","arguments":{"seconds":3600,"progress_every":0},"result":null,"error":null,"status":"in_progress"}}
+{"type":"item.completed","item":{"id":"item_1","type":"mcp_tool_call","server":"probe","tool":"wait_probe","arguments":{"seconds":3600,"progress_every":0},"result":{"content":[{"type":"text","text":"PROBE_DONE after 3600.0s"}],"structured_content":null},"error":null,"status":"completed"}}
+{"type":"item.completed","item":{"id":"item_2","type":"agent_message","text":"PROBE_DONE after 3600.0s"}}
+{"type":"turn.completed","usage":{"input_tokens":64329,"cached_input_tokens":59520,"cache_write_input_tokens":0,"output_tokens":365,"reasoning_output_tokens":181}}

@@ -1,0 +1,7 @@
+{"at":"2026-09-29T04:33:47.402Z","t":"0.0","pid":70785,"event":"server_start","argv":[]}
+{"at":"2026-09-29T04:33:47.433Z","t":"0.0","pid":70785,"event":"recv","method":"initialize","id":0}
+{"at":"2026-09-29T04:33:47.447Z","t":"0.0","pid":70785,"event":"recv","method":"notifications/initialized","id":null}
+{"at":"2026-09-29T04:33:47.447Z","t":"0.0","pid":70785,"event":"recv","method":"tools/list","id":1}
+{"at":"2026-09-29T04:33:51.631Z","t":"4.2","pid":70785,"event":"recv","method":"tools/call","id":2,"params":{"name":"wait_probe","arguments":{"seconds":3600,"progress_every":0},"_meta":{"claudecode/toolUseId":"toolu_01SesnBzi7LTTWGsdjcBxQHL","progressToken":2}}}
+{"at":"2026-09-29T04:33:51.631Z","t":"4.2","pid":70785,"event":"call_start","id":2,"seconds":3600,"every":0,"progressToken":2}
+{"at":"2026-09-29T05:33:51.593Z","t":"3604.2","pid":70785,"event":"call_done","id":2,"elapsed":"3600.0"}

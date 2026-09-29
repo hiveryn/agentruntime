@@ -1,0 +1,10 @@
+{"at":"2026-09-29T03:56:09.964Z","t":"0.0","pid":43715,"event":"server_start","argv":[]}
+{"at":"2026-09-29T03:56:09.965Z","t":"0.0","pid":43715,"event":"recv","method":"initialize","id":0}
+{"at":"2026-09-29T03:56:09.968Z","t":"0.0","pid":43715,"event":"recv","method":"notifications/initialized","id":null}
+{"at":"2026-09-29T03:56:09.968Z","t":"0.0","pid":43715,"event":"recv","method":"tools/list","id":1}
+{"at":"2026-09-29T03:56:17.023Z","t":"7.1","pid":43715,"event":"recv","method":"tools/call","id":2,"params":{"name":"wait_probe","arguments":{"seconds":90,"progress_every":0},"_meta":{"progressToken":2}}}
+{"at":"2026-09-29T03:56:17.024Z","t":"7.1","pid":43715,"event":"call_start","id":2,"seconds":90,"every":0,"progressToken":2}
+{"at":"2026-09-29T03:57:17.054Z","t":"67.1","pid":43715,"event":"recv","method":"notifications/cancelled","id":null,"params":{"requestId":2,"reason":"McpError: MCP error -32001: Request timed out"}}
+{"at":"2026-09-29T03:57:17.054Z","t":"67.1","pid":43715,"event":"call_cancelled","id":2,"elapsed":"60.0","reason":"McpError: MCP error -32001: Request timed out"}
+{"at":"2026-09-29T03:57:17.256Z","t":"67.3","pid":43715,"event":"recv","method":"notifications/cancelled","id":null,"params":{"requestId":2,"reason":"AbortError: The operation was aborted."}}
+{"at":"2026-09-29T03:57:19.815Z","t":"69.9","pid":43715,"event":"stdin_end","pending":[]}

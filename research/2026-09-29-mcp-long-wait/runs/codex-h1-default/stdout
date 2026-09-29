@@ -1,0 +1,9 @@
+{"type":"thread.started","thread_id":"01a0eb51-c9e8-7da1-bc88-8f8ad317409b"}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_0","type":"agent_message","text":"I’ll call wait_probe once with the specified arguments and return its response exactly.\n"}}
+{"type":"item.started","item":{"id":"item_1","type":"mcp_tool_call","server":"probe","tool":"wait_probe","arguments":{"seconds":3600,"progress_every":0},"result":null,"error":null,"status":"in_progress"}}
+{"type":"item.completed","item":{"id":"item_2","type":"agent_message","text":"wait_probe is still running; it has returned no text yet.\n"}}
+{"type":"item.completed","item":{"id":"item_3","type":"agent_message","text":"wait_probe is still pending with no response or error.\n"}}
+{"type":"item.completed","item":{"id":"item_1","type":"mcp_tool_call","server":"probe","tool":"wait_probe","arguments":{"seconds":3600,"progress_every":0},"result":null,"error":{"message":"tool call error: tool call failed for `probe/wait_probe`\n\nCaused by:\n    timed out awaiting tools/call after 300s"},"status":"failed"}}
+{"type":"item.completed","item":{"id":"item_4","type":"agent_message","text":"tool call error: tool call failed for `probe/wait_probe`\n\nCaused by:\n    timed out awaiting tools/call after 300s"}}
+{"type":"turn.completed","usage":{"input_tokens":129512,"cached_input_tokens":123776,"cache_write_input_tokens":0,"output_tokens":465,"reasoning_output_tokens":95}}

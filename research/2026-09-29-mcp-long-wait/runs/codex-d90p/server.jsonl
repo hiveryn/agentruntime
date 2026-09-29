@@ -1,0 +1,16 @@
+{"at":"2026-09-29T03:56:07.569Z","t":"0.0","pid":42318,"event":"server_start","argv":[]}
+{"at":"2026-09-29T03:56:07.570Z","t":"0.0","pid":42318,"event":"recv","method":"initialize","id":0}
+{"at":"2026-09-29T03:56:07.571Z","t":"0.0","pid":42318,"event":"recv","method":"notifications/initialized","id":null}
+{"at":"2026-09-29T03:56:07.571Z","t":"0.0","pid":42318,"event":"recv","method":"tools/list","id":1}
+{"at":"2026-09-29T03:56:18.300Z","t":"10.7","pid":42318,"event":"recv","method":"tools/call","id":2,"params":{"_meta":{"callId":"exec-e892163f-004f-4379-b08b-df1491ecd282","x-codex-turn-metadata":{"session_id":"01a0eb4e-3952-7393-a41e-df4ad7668b74","thread_id":"01a0eb4e-3952-7393-a41e-df4ad7668b74","reasoning_effort":"medium","turn_id":"01a0eb4e-39d2-7151-a4a3-9d7b801da976","model":"gpt-6-astra","thread_source":"user","turn_trigger":"exec","sandbox":"seatbelt","sandbox_mode":"read-only","auto_review_enabled":false,"node_repl_auto_review_required":true,"node_repl_disabled":false,"workspaces":{"/Users/kareemelbahrawy/hiveryn/agentruntime":{"associated_remote_urls":{"origin":"git@github.com:hiveryn/agentruntime.git"},"latest_git_commit_hash":"ee05376e877e190c618337a588f89e18cf49edfd","has_changes":true}},"turn_started_at_unix_ms":1790654167508,"codex_version":"0.158.0"},"threadId":"01a0eb4e-3952-7393-a41e-df4ad7668b74","sessionId":"01a0eb4e-3952-7393-a41e-df4ad7668b74","windowId":"01a0eb4e-3952-7393-a41e-df4ad7668b74:0","itemId":"ctc_0c66c9152b16807d016abb36dfd1b887d28bfe8b127828ff38","progressToken":1},"name":"wait_probe","arguments":{"seconds":90,"progress_every":10}}}
+{"at":"2026-09-29T03:56:18.302Z","t":"10.7","pid":42318,"event":"call_start","id":2,"seconds":90,"every":10,"progressToken":1}
+{"at":"2026-09-29T03:56:28.303Z","t":"20.7","pid":42318,"event":"progress_sent","id":2,"progress":10}
+{"at":"2026-09-29T03:56:38.303Z","t":"30.7","pid":42318,"event":"progress_sent","id":2,"progress":20}
+{"at":"2026-09-29T03:56:48.305Z","t":"40.7","pid":42318,"event":"progress_sent","id":2,"progress":30}
+{"at":"2026-09-29T03:56:58.306Z","t":"50.7","pid":42318,"event":"progress_sent","id":2,"progress":40}
+{"at":"2026-09-29T03:57:08.306Z","t":"60.7","pid":42318,"event":"progress_sent","id":2,"progress":50}
+{"at":"2026-09-29T03:57:18.307Z","t":"70.7","pid":42318,"event":"progress_sent","id":2,"progress":60}
+{"at":"2026-09-29T03:57:28.309Z","t":"80.7","pid":42318,"event":"progress_sent","id":2,"progress":70}
+{"at":"2026-09-29T03:57:38.310Z","t":"90.7","pid":42318,"event":"progress_sent","id":2,"progress":80}
+{"at":"2026-09-29T03:57:48.307Z","t":"100.7","pid":42318,"event":"call_done","id":2,"elapsed":"90.0"}
+{"at":"2026-09-29T03:57:50.436Z","t":"102.9","pid":42318,"event":"sigterm","pending":[]}
