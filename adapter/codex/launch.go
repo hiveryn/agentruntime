@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/hiveryn/agentruntime"
@@ -80,6 +81,15 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 		args = append(args, "--config", tomlKV("developer_instructions", req.Instructions))
 	}
 
+	if req.DisableNativeQuestions {
+		// Removes the blocking request_user_input tool. The model-catalog
+		// request_user_input_async tool has no disabling setting and remains.
+		args = append(args, "--config", "tools.experimental_request_user_input.enabled=false")
+	}
+
+	if err := agentruntime.ValidateToolTimeouts(req.MCPServers); err != nil {
+		return agentruntime.LaunchSpec{}, err
+	}
 	for _, server := range req.MCPServers {
 		serverArgs, err := mcpConfigArgs(server)
 		if err != nil {
@@ -174,6 +184,9 @@ func mcpConfigArgs(server agentruntime.MCPServerConfig) ([]string, error) {
 		if len(server.Env) > 0 {
 			add("env", tomlStringMap(server.Env))
 		}
+	}
+	if server.ToolTimeout > 0 {
+		add("tool_timeout_sec", strconv.FormatFloat(server.ToolTimeout.Seconds(), 'f', -1, 64))
 	}
 
 	return out, nil

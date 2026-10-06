@@ -61,7 +61,7 @@ type StartRequest struct {
 	AdditionalWorkdirs []string
 	Prompt             string
 	Model              string  // Agent model selector, translated to the agent-specific flag (e.g. --model). Agent-specific value form (claude/codex: bare id; opencode: provider/model).
-	Yolo               bool    // Full autonomy: skip approvals/permission prompts. Translated to the agent-specific flag (claude --dangerously-skip-permissions, codex --dangerously-bypass-approvals-and-sandbox, opencode permission:allow).
+	Yolo               bool    // Full autonomy: skip approvals/permission prompts. Translated to the agent-specific flag (claude --dangerously-skip-permissions, codex --dangerously-bypass-approvals-and-sandbox, opencode permission:allow, or "*":allow when DisableNativeQuestions also denies the question tool).
 	Mode               Mode    // Execution mode (build or plan). Empty defaults to build. Plan is unsupported by codex.
 	RunMode            RunMode // Interactivity posture. Empty defaults to interactive. Headless runs the agent
 	// non-interactively to completion and exits (claude --print, codex exec, opencode run); the consumer
@@ -77,6 +77,16 @@ type StartRequest struct {
 	// callers never redirect each other's sessions. Empty disables hook delivery
 	// for this session.
 	HookEndpoint string
+	// DisableNativeQuestions removes the provider's native ask-the-user tool for
+	// this launch, so the caller can route questions through its own MCP tool.
+	// It is applied per process, on new and resumed launches alike: claude
+	// --disallowedTools=AskUserQuestion; codex
+	// tools.experimental_request_user_input.enabled=false (removes
+	// request_user_input only; the model-catalog request_user_input_async tool
+	// offered to some models has no disabling setting and remains); opencode
+	// permission.question=deny. Permission/approval prompts and startup dialogs
+	// are not question tools and are unaffected.
+	DisableNativeQuestions bool
 }
 
 // OpenCodeAgentConfig defines an OpenCode agent profile entry for the config agent section.
@@ -151,6 +161,17 @@ type MCPServerConfig struct {
 	Env               map[string]string
 	URL               string
 	BearerTokenEnvVar string
+	// ToolTimeout is how long one tool call to this server may stay pending
+	// before the provider gives up; zero keeps the provider default (claude
+	// 30 min stdio idle limit, codex 300 s, opencode 60 s). A call stays in the
+	// foreground conversation until it returns or the deadline passes: claude
+	// sets the per-server timeout (ms, which also raises its idle limit) and
+	// disables automatic MCP backgrounding for the session
+	// (CLAUDE_CODE_MCP_AUTO_BACKGROUND_MS=0); codex sets tool_timeout_sec;
+	// opencode sets the per-server timeout (ms), which also bounds connecting
+	// and listing tools. Set it above the server's own longest wait so the
+	// server's reply, including its own timeout reply, arrives in time.
+	ToolTimeout time.Duration
 }
 
 // HookCommand is the endpoint-independent command installed into a provider's

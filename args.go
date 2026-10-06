@@ -3,6 +3,7 @@ package agentruntime
 import (
 	"fmt"
 	"strings"
+	"time"
 )
 
 // IsPlan validates the mode and reports whether it requests plan mode.
@@ -54,4 +55,20 @@ func FindManagedArg(args []string, flags ...string) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+// ValidateToolTimeouts rejects negative MCPServerConfig.ToolTimeout values.
+func ValidateToolTimeouts(servers []MCPServerConfig) error {
+	for _, server := range servers {
+		if server.ToolTimeout < 0 {
+			return fmt.Errorf("mcp server %q has negative tool timeout %s", server.Name, server.ToolTimeout)
+		}
+	}
+	return nil
+}
+
+// Milliseconds returns d in whole milliseconds, rounded up so a positive
+// duration never becomes zero (which providers read as "use the default").
+func Milliseconds(d time.Duration) int64 {
+	return int64((d + time.Millisecond - 1) / time.Millisecond)
 }

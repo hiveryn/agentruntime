@@ -115,7 +115,12 @@ every caller using the marker is being uninstalled.
 - **`Prompt`** — initial prompt when the runtime supports it.
 - **`Instructions`** — runtime-specific instruction/system-prompt input.
 - **`MCPServers`** — stdio or HTTP MCP servers synthesized into the runtime's
-  config shape.
+  config shape. `MCPServerConfig.ToolTimeout` optionally sets how long one tool
+  call to that server may stay pending; see
+  [Native Questions and Long MCP Calls](#native-questions-and-long-mcp-calls).
+- **`DisableNativeQuestions`** — remove the runtime's own ask-the-user tool for
+  this launch; see
+  [Native Questions and Long MCP Calls](#native-questions-and-long-mcp-calls).
 - **`OpenCodeAgentConfig`** — (OpenCode only) agent profile definitions merged
   into the `agent` section of `OPENCODE_CONFIG_CONTENT`. Each key is the profile
   name; the value is an `OpenCodeAgentConfig` with `Description`, `Mode`,
@@ -132,7 +137,8 @@ every caller using the marker is being uninstalled.
 
 Ordinary runtime options should be passed through `Command`, `Args`, and `Env`.
 The library only models behavior it must synthesize for portability: MCP config,
-instruction injection, session correlation, and hook/plugin setup.
+instruction injection, session correlation, native-question and MCP-timeout
+controls, and hook/plugin setup.
 
 ## Consumer Contract
 
@@ -169,6 +175,7 @@ When executing a `LaunchSpec`, callers must:
 | `AGENTRUNTIME_HOOK_ENDPOINT` | Claude, Codex, OpenCode | Set to `StartRequest.HookEndpoint` (`""` when empty, masking inherited values); rejected if conflicting |
 | `OPENCODE_CONFIG_CONTENT` | OpenCode                | Rejected if non-empty in `StartRequest.Env`     |
 | `CLAUDE_CODE_FORCE_SESSION_PERSISTENCE` | Claude    | Always forced to `"1"`, overriding any value in `StartRequest.Env`; counteracts an inherited `CLAUDE_CODE_CHILD_SESSION` marker disabling transcript persistence |
+| `CLAUDE_CODE_MCP_AUTO_BACKGROUND_MS` | Claude       | Set to `"0"` when any MCP server has a `ToolTimeout`; rejected if `StartRequest.Env` sets another value. Untouched otherwise |
 
 ### Adapter-Managed Arguments
 
@@ -193,8 +200,8 @@ beyond the primary `Workdir`, using each adapter's native mechanism:
 - **OpenCode** — no CLI flag; each directory is granted via
   `permission.external_directory` in `OPENCODE_CONFIG_CONTENT`
   (`"<dir>/**": "allow"`). When `Yolo` is also set, the blanket
-  `permission: "allow"` already covers external directories, so no separate
-  entries are added.
+  `permission: "allow"` (or `"*": "allow"` with `DisableNativeQuestions`)
+  already covers external directories, so no separate entries are added.
 
 **OpenCode agent-permission hardening.** OpenCode merges each agent's own
 `permission` config *after* the global config and lets the agent's rule win,
@@ -213,6 +220,52 @@ The normalized (absolute, cleaned, deduped) list is echoed back on
 `LaunchSpec.AdditionalWorkdirs` for caller visibility; no caller action is
 required to apply it (unlike `Workdir`), and it is applied identically on
 fresh launch and every resume variant.
+
+### Native Questions and Long MCP Calls
+
+These controls let a caller route questions to the user through its own MCP
+tool, and keep a tool call pending for a long time (e.g. a question that waits
+up to an hour), without changing any global provider configuration. Both are
+per-process launch settings: they are applied the same way on a new launch and
+on every resume variant, so callers must pass them on every launch.
+
+**`StartRequest.DisableNativeQuestions`** removes the provider's native
+ask-the-user tool from the model's tool list. MCP tools, permission/approval
+prompts and startup dialogs (folder trust, hook review) are not affected.
+
+| Adapter  | Mechanism | Removed | Not removed |
+|----------|-----------|---------|-------------|
+| Claude   | `--disallowedTools=AskUserQuestion` (the `=` form, because the flag is variadic; further `--disallowedTools` in `Args` combine with it) | `AskUserQuestion` | — |
+| Codex    | `--config tools.experimental_request_user_input.enabled=false` (experimental, undocumented key) | `request_user_input` | `request_user_input_async`, which the model catalog offers to some models (e.g. `gpt-6-astra`); Codex has no setting to disable it. It is non-blocking: it renders the question and the answer arrives as the user's next message. Only instructions can discourage it |
+| OpenCode | `permission.question = "deny"` in `OPENCODE_CONFIG_CONTENT`. `Yolo` then emits `{"*": "allow", "question": "deny"}` instead of `"allow"`; with `AdditionalWorkdirs` the rule joins `external_directory` | `question` | — |
+
+OpenCode merges agent permissions after the global ones, so with
+`DisableNativeQuestions` `PrepareLaunch` rejects an `OpenCodeAgentConfig` whose
+`Permission` sets `question` or `*` to anything other than `"deny"`.
+
+**`MCPServerConfig.ToolTimeout`** is how long one tool call to that server may
+stay pending before the provider gives up. Zero keeps the provider default; a
+negative value is rejected. Set it above the server's longest wait so that the
+server's own timeout reply still reaches the model (for a one-hour wait, e.g.
+65 minutes).
+
+| Adapter  | Mechanism | Default without it |
+|----------|-----------|--------------------|
+| Claude   | Per-server `"timeout"` (ms) in the `--mcp-config` file; it also raises that server's no-progress idle limit. Also sets `CLAUDE_CODE_MCP_AUTO_BACKGROUND_MS=0` for the session, so a pending MCP call stays in the foreground turn instead of becoming a background task after 2 minutes in the TUI (this applies to every MCP server of the session) | 30 min idle limit for stdio servers; TUI backgrounding at 2 min |
+| Codex    | `--config mcp_servers.<name>.tool_timeout_sec=<seconds>` | 300 s; progress notifications do not extend it |
+| OpenCode | Per-server `"timeout"` (ms) on the `mcp.<name>` entry; it also bounds connecting and listing tools | 60 s; progress notifications reset it |
+
+A long timeout also means a hung call to that server fails only after the
+timeout. Values are rounded up to whole milliseconds.
+
+Known provider behaviour while a call is pending (agentruntime does not change
+it): Codex with code-mode models such as `gpt-6-astra` reaches MCP tools
+through a script cell and may poll it repeatedly with `functions.wait`, costing
+model requests during the wait. Codex never sends `notifications/cancelled`
+when it stops waiting (timeout or Esc). Claude sends no cancel on its idle
+timeout. OpenCode may send a stray cancel just after a successful result. A
+server should therefore treat "the client stopped waiting" as a normal
+outcome. Evidence: `research/2026-09-29-mcp-long-wait/`.
 
 ### Resume Behavior
 

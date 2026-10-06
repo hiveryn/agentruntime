@@ -21,7 +21,17 @@ type mcpServer struct {
 	Env     map[string]string `json:"env,omitempty"`
 	URL     string            `json:"url,omitempty"`
 	Headers map[string]string `json:"headers,omitempty"`
+	// Timeout is the per-server tool-call timeout in milliseconds.
+	Timeout int64 `json:"timeout,omitempty"`
 }
+
+const (
+	// questionTool is claude's native ask-the-user tool.
+	questionTool = "AskUserQuestion"
+	// autoBackgroundEnv sets when claude moves a pending MCP call to a
+	// background task (ending the turn); 0 disables it.
+	autoBackgroundEnv = "CLAUDE_CODE_MCP_AUTO_BACKGROUND_MS"
+)
 
 var managedArgs = map[string]struct{}{
 	"--append-system-prompt": {},
@@ -87,12 +97,20 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 	if err := appendClaudePermissionArgs(&args, req); err != nil {
 		return agentruntime.LaunchSpec{}, err
 	}
+	if req.DisableNativeQuestions {
+		// The --flag=value form: --disallowedTools is variadic, so a separate
+		// value token could swallow a following positional.
+		args = append(args, "--disallowedTools="+questionTool)
+	}
 	if strings.TrimSpace(req.Instructions) != "" {
 		flag := "--system-prompt"
 		if a.options.AppendInstructions {
 			flag = "--append-system-prompt"
 		}
 		args = append(args, flag, req.Instructions)
+	}
+	if err := agentruntime.ValidateToolTimeouts(req.MCPServers); err != nil {
+		return agentruntime.LaunchSpec{}, err
 	}
 	if len(req.MCPServers) > 0 {
 		path, err := writeMCPConfig(req.MCPServers)
@@ -144,6 +162,14 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 		// the daemon process happened to inherit.
 		"CLAUDE_CODE_FORCE_SESSION_PERSISTENCE": "1",
 	})
+	if hasToolTimeout(req.MCPServers) {
+		// In the TUI claude moves an MCP call pending for 2 min to a background
+		// task and ends the turn; keep long calls in the foreground instead.
+		if v, ok := req.Env[autoBackgroundEnv]; ok && v != "0" {
+			return agentruntime.LaunchSpec{}, fmt.Errorf("env %s=%q conflicts with mcp tool timeouts, which keep tool calls in the foreground (%s=0); remove it from env", autoBackgroundEnv, v, autoBackgroundEnv)
+		}
+		env[autoBackgroundEnv] = "0"
+	}
 
 	return agentruntime.LaunchSpec{
 		Command:            command,
@@ -183,6 +209,15 @@ func appendClaudePermissionArgs(args *[]string, req agentruntime.StartRequest) e
 	return nil
 }
 
+func hasToolTimeout(servers []agentruntime.MCPServerConfig) bool {
+	for _, server := range servers {
+		if server.ToolTimeout > 0 {
+			return true
+		}
+	}
+	return false
+}
+
 func writeMCPConfig(servers []agentruntime.MCPServerConfig) (string, error) {
 	config := mcpConfig{MCPServers: make(map[string]mcpServer, len(servers))}
 	for _, server := range servers {
@@ -220,6 +255,15 @@ func writeMCPConfig(servers []agentruntime.MCPServerConfig) (string, error) {
 }
 
 func mapMCPServer(server agentruntime.MCPServerConfig) (mcpServer, error) {
+	mapped, err := mapMCPTransport(server)
+	if err != nil {
+		return mcpServer{}, err
+	}
+	mapped.Timeout = agentruntime.Milliseconds(server.ToolTimeout)
+	return mapped, nil
+}
+
+func mapMCPTransport(server agentruntime.MCPServerConfig) (mcpServer, error) {
 	if server.Name == "" {
 		return mcpServer{}, fmt.Errorf("mcp server missing name")
 	}

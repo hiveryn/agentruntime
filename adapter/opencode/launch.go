@@ -31,6 +31,9 @@ type ocMCPServer struct {
 	URL         string            `json:"url,omitempty"`
 	Headers     map[string]string `json:"headers,omitempty"`
 	Enabled     bool              `json:"enabled"`
+	// Timeout is the per-server timeout in milliseconds for tool calls (and
+	// for connecting and listing tools).
+	Timeout int64 `json:"timeout,omitempty"`
 }
 
 var managedArgs = map[string]struct{}{
@@ -82,6 +85,9 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 		cleanupPaths = append(cleanupPaths, path)
 	}
 
+	if err := agentruntime.ValidateToolTimeouts(req.MCPServers); err != nil {
+		return agentruntime.LaunchSpec{}, err
+	}
 	if len(req.MCPServers) > 0 {
 		cfg.MCP = make(map[string]ocMCPServer, len(req.MCPServers))
 		for _, server := range req.MCPServers {
@@ -101,6 +107,11 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 					return agentruntime.LaunchSpec{}, err
 				}
 			}
+			if req.DisableNativeQuestions {
+				if err := checkAgentQuestionConflict(name, ac.Permission); err != nil {
+					return agentruntime.LaunchSpec{}, err
+				}
+			}
 			cfg.Agent[name] = ocAgentEntry{
 				Description: ac.Description,
 				Mode:        ac.Mode,
@@ -112,12 +123,7 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 
 	// opencode has no permission-bypass CLI flag; full autonomy is expressed in
 	// config. There is no raw arg to conflict with, so nothing to reject here.
-	switch {
-	case req.Yolo:
-		cfg.Permission = "allow"
-	case len(additionalWorkdirs) > 0:
-		cfg.Permission = scopedPermissions(additionalWorkdirs)
-	}
+	cfg.Permission = permissionConfig(req.Yolo, req.DisableNativeQuestions, additionalWorkdirs)
 
 	configJSON, err := json.Marshal(cfg)
 	if err != nil {
@@ -192,12 +198,48 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 	}, nil
 }
 
-func scopedPermissions(writable []string) map[string]any {
-	external := make(map[string]string, len(writable))
-	for _, path := range writable {
-		external[path+"/**"] = "allow"
+// permissionConfig builds the top-level permission config: nil (opencode
+// defaults), the string "allow" for Yolo, or an object when individual rules
+// are needed. Disabling native questions denies the question tool, which hides
+// it from the model; with Yolo every other tool stays allowed through "*". The
+// object marshals with sorted keys, so "*" precedes the specific rules and
+// they win over it.
+func permissionConfig(yolo, disableQuestions bool, writable []string) any {
+	if yolo && !disableQuestions {
+		return "allow"
 	}
-	return map[string]any{"external_directory": external}
+	rules := map[string]any{}
+	switch {
+	case yolo:
+		rules["*"] = "allow"
+	case len(writable) > 0:
+		external := make(map[string]string, len(writable))
+		for _, path := range writable {
+			external[path+"/**"] = "allow"
+		}
+		rules["external_directory"] = external
+	}
+	if disableQuestions {
+		rules["question"] = "deny"
+	}
+	if len(rules) == 0 {
+		return nil
+	}
+	return rules
+}
+
+// checkAgentQuestionConflict rejects an OpenCode agent profile whose own
+// permission would re-enable the question tool denied by
+// DisableNativeQuestions: agent permission is merged after the global config,
+// so a "question" or catch-all "*" rule other than "deny" would shadow it.
+func checkAgentQuestionConflict(name string, permission map[string]string) error {
+	for _, key := range []string{"question", "*"} {
+		action, ok := permission[key]
+		if ok && action != "deny" {
+			return fmt.Errorf("opencode agent %q sets permission[%q]=%q, which would re-enable the question tool disabled by DisableNativeQuestions; remove it or set it to \"deny\"", name, key, action)
+		}
+	}
+	return nil
 }
 
 // checkAgentPermissionConflict rejects an OpenCode agent profile whose declared
@@ -243,6 +285,15 @@ func writeInstructions(instructions string) (string, error) {
 }
 
 func mapMCPServer(server agentruntime.MCPServerConfig) (ocMCPServer, error) {
+	mapped, err := mapMCPTransport(server)
+	if err != nil {
+		return ocMCPServer{}, err
+	}
+	mapped.Timeout = agentruntime.Milliseconds(server.ToolTimeout)
+	return mapped, nil
+}
+
+func mapMCPTransport(server agentruntime.MCPServerConfig) (ocMCPServer, error) {
 	if server.Name == "" {
 		return ocMCPServer{}, fmt.Errorf("mcp server missing name")
 	}
