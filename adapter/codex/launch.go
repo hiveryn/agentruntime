@@ -52,6 +52,20 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 		return agentruntime.LaunchSpec{}, fmt.Errorf("argument %q conflicts with the adapter's managed hook trust; remove it from args", a)
 	}
 	args = append(args, "--dangerously-bypass-hook-trust")
+	if a, ok := agentruntime.FindManagedArg(req.Args, "--add-dir"); ok {
+		return agentruntime.LaunchSpec{}, fmt.Errorf("argument %q conflicts with managed additional workdirs; remove it from args", a)
+	}
+	workdirArgs := make([]string, 0, 2+2*len(additionalWorkdirs))
+	workdirArgs = append(workdirArgs, "--cd", req.Workdir)
+	for _, dir := range additionalWorkdirs {
+		workdirArgs = append(workdirArgs, "--add-dir", dir)
+	}
+	// `codex exec resume` accepts neither --cd nor --add-dir; they are `exec`
+	// options and must precede the resume subcommand.
+	execResume := headless && req.Resume
+	if execResume {
+		args = append(args, workdirArgs...)
+	}
 	if req.Resume {
 		switch {
 		case req.ResumeID != "":
@@ -98,13 +112,9 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 		args = append(args, serverArgs...)
 	}
 
-	if a, ok := agentruntime.FindManagedArg(req.Args, "--add-dir"); ok {
-		return agentruntime.LaunchSpec{}, fmt.Errorf("argument %q conflicts with managed additional workdirs; remove it from args", a)
-	}
 	args = append(args, req.Args...)
-	args = append(args, "--cd", req.Workdir)
-	for _, dir := range additionalWorkdirs {
-		args = append(args, "--add-dir", dir)
+	if !execResume {
+		args = append(args, workdirArgs...)
 	}
 	// For bare interactive resume (`resume` picker), codex treats the next
 	// positional as SESSION_ID not PROMPT. Only append the prompt when starting

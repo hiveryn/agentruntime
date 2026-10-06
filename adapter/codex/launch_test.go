@@ -2,6 +2,7 @@ package codex
 
 import (
 	"context"
+	"slices"
 	"strings"
 	"testing"
 
@@ -764,6 +765,38 @@ func TestPrepareLaunchAdditionalWorkdirsHeadlessExecResume(t *testing.T) {
 	}
 	if !hasArgPair(spec.Args, "--add-dir", "/repo-b") {
 		t.Fatalf("headless exec resume: missing --add-dir /repo-b: %q", spec.Args)
+	}
+	// `codex exec resume` rejects --cd/--add-dir; they must be exec options
+	// placed before the resume subcommand.
+	assertBefore(t, spec.Args, "--cd", "resume")
+	assertBefore(t, spec.Args, "--add-dir", "resume")
+
+	req.ResumeID = "sess-9"
+	spec, err = adapter.PrepareLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertBefore(t, spec.Args, "--cd", "resume")
+	assertBefore(t, spec.Args, "--add-dir", "resume")
+}
+
+func TestPrepareLaunchInteractiveResumeKeepsWorkdirAfterResume(t *testing.T) {
+	// Interactive `codex resume` accepts --cd/--add-dir itself.
+	spec, err := New(DefaultOptions()).PrepareLaunch(context.Background(), agentruntime.StartRequest{
+		ID: "s", Workdir: "/tmp/work", Resume: true, ResumeID: "sess-9", AdditionalWorkdirs: []string{"/repo-b"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertBefore(t, spec.Args, "resume", "--cd")
+	assertBefore(t, spec.Args, "resume", "--add-dir")
+}
+
+func assertBefore(t *testing.T, args []string, first, second string) {
+	t.Helper()
+	i, j := slices.Index(args, first), slices.Index(args, second)
+	if i < 0 || j < 0 || i > j {
+		t.Fatalf("want %q before %q: %q", first, second, args)
 	}
 }
 

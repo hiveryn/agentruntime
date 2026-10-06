@@ -281,6 +281,10 @@ Bare resume opens an interactive picker for Claude and Codex. OpenCode has no
 launch-time picker, so `--continue` (resume the last session) is the closest
 fallback.
 
+Headless Codex resume is `codex exec ... resume <id>|--last`; because
+`codex exec resume` accepts neither `--cd` nor `--add-dir`, the adapter emits
+them as `exec` options before `resume`.
+
 In resume mode, Claude skips generating a new `--session-id`.
 `AGENTRUNTIME_SESSION_ID` is always set to `StartRequest.ID` regardless of
 resume mode.
