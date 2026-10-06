@@ -1,0 +1,50 @@
+                                                                                                                                                           █
+  ┃                                                                                                                                                        █    Executing 3600 second wait command
+  ┃  Call the MCP tool wait_probe exactly once with arguments {"seconds": 3600, "progress_every": 0}. Do not call any other tool. When it returns, reply   █
+  ┃  with exactly the text it returned; if it fails or times out, reply with the exact error text you received.                                            █    Context
+  ┃                                                                                                                                                        █    13,277 tokens
+                                                                                                                                                           █    1% used
+     + Thought: 382ms                                                                                                                                      █    $0.02 spent
+                                                                                                                                                           █
+  ┃                                                                                                                                                        █    MCP
+  ┃  # probe_wait_probe [seconds=3600, progress_every=0]                                                                                                   █    • probe Connected
+  ┃                                                                                                                                                        █
+  ┃  PROBE_DONE after 3600.0s                                                                                                                              █    LSP
+  ┃                                                                                                                                                        █    LSPs are disabled
+                                                                                                                                                           █
+     PROBE_DONE after 3600.0s                                                                                                                              █
+                                                                                                                                                           █
+     ▣  Build · DeepSeek V4 Pro · 1h 0m                                                                                                                    █
+                                                                                                                                                           █
+                                                                                                                                                           █
+                                                                                                                                                           █
+                                                                                                                                                           █
+                                                                                                                                                           █
+                                                                                                                                                           █
+                                                                                                                                                           █
+                                                                                                                                                           █
+                                                                                                                                                           █
+                                                                                                                                                           █
+                                                                                                                                                           █
+                                                                                                                                                           █
+                                                                                                                                                           █
+                                                                                                                                                           █
+                                                                                                                                                           █
+                                                                                                                                                           █
+                                                                                                                                                           █
+                                                                                                                                                           █
+                                                                                                                                                           █
+                                                                                                                                                           █
+                                                                                                                                                           █
+                                                                                                                                                           █
+                                                                                                                                                           █
+                                                                                                                                                           █
+                                                                                                                                                           █
+
+  ┃
+  ┃                                                                                                                                                             ~/hiveryn/agentruntime/research/2026-
+  ┃                                                                                                                                                             09-29-mcp-long-wait/runs/opencode-tui-
+  ┃  Build · DeepSeek V4 Pro DeepSeek                                                                                                                           h1-adapter/work:main
+  ╹▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+                                                                                                                         13.3K (1%) · $0.02  ctrl+p commands    • OpenCode 1.17.18
+

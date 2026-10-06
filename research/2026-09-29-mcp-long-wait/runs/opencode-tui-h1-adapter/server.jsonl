@@ -1,0 +1,9 @@
+{"at":"2026-10-06T00:55:29.696Z","t":"0.0","pid":4718,"event":"server_start","argv":[]}
+{"at":"2026-10-06T00:55:29.697Z","t":"0.0","pid":4718,"event":"recv","method":"initialize","id":0}
+{"at":"2026-10-06T00:55:29.707Z","t":"0.0","pid":4718,"event":"recv","method":"notifications/initialized","id":null}
+{"at":"2026-10-06T00:55:29.707Z","t":"0.0","pid":4718,"event":"recv","method":"tools/list","id":1}
+{"at":"2026-10-06T00:55:35.998Z","t":"6.3","pid":4718,"event":"recv","method":"tools/call","id":2,"params":{"name":"wait_probe","arguments":{"seconds":3600,"progress_every":0},"_meta":{"progressToken":2}}}
+{"at":"2026-10-06T00:55:35.999Z","t":"6.3","pid":4718,"event":"call_start","id":2,"seconds":3600,"every":0,"progressToken":2}
+{"at":"2026-10-06T01:55:36.015Z","t":"3606.3","pid":4718,"event":"call_done","id":2,"elapsed":"3600.0"}
+{"at":"2026-10-06T01:55:36.151Z","t":"3606.5","pid":4718,"event":"recv","method":"notifications/cancelled","id":null,"params":{"requestId":2,"reason":"AbortError: The operation was aborted."}}
+{"at":"2026-10-06T01:57:32.103Z","t":"3722.4","pid":4718,"event":"stdin_end","pending":[]}

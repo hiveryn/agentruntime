@@ -1,0 +1,21 @@
+# Tool lists captured from launch specs built by agentruntime PrepareLaunch (2026-10-06).
+# label: tool_count | native question tools present | probe MCP tool present
+codex-astra: 10 | ['functions.request_user_input_async'] | []
+codex-astra-noflag: 11 | ['functions.request_user_input', 'functions.request_user_input_async'] | []
+codex-55: 13 | [] | []
+codex-55-noflag: 14 | ['request_user_input'] | []
+oc-tui-yolo: 11 | [] | ['probe_wait_probe']
+oc-tui-yolo-noflag: 12 | ['question'] | ['probe_wait_probe']
+oc-tui-noyolo: 11 | [] | ['probe_wait_probe']
+oc-tui-resume: 11 | [] | ['probe_wait_probe']
+oc-tui-resume-noflag: 12 | ['question'] | ['probe_wait_probe']
+claude-caller-disallow (+ Args --disallowedTools=Bash): 34 | [] | []  (Bash also absent)
+claude-caller-disallow-sep (+ Args --disallowedTools WebFetch --model sonnet): 33 | [] | ['mcp__probe__wait_probe']  (WebFetch also absent)
+claude-new: 33 | [] | []
+claude-resume: 34 | [] | ['mcp__probe__wait_probe']
+claude-resume-noflag: 34 | ['AskUserQuestion'] | []
+# Claude 2.1.290 connects MCP servers asynchronously (WaitForMcpServers tool): whether the probe tool is in the
+# first request varies run to run with or without the flag; the probe server logged tools/list in every run.
+# Versions: Claude Code 2.1.290, codex-cli 0.160.0, OpenCode 1.17.18. Codex probe tools are reached through
+# code mode / tool_search, so they never appear by name. Codex/claude new vs noflag pairs differ only in the
+# question tool.

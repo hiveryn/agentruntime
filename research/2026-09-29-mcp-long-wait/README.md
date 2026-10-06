@@ -220,6 +220,19 @@ A one-hour pending call is therefore **verified** on all three CLIs with these s
 - No phone notification or desktop dialog was built or exercised. `probe-server.mjs` only stands in for the pending call.
 - Claude auto-updated from 2.1.283 to 2.1.284 mid-session. The headless Claude one-hour runs that started at 04:00 may have used 2.1.283.
 
+## 5. Addendum 2026-10-06: adapter launch controls
+
+Ticket `2026-10-06-1144-add-provider-launch-controls-for-hiveryn-questions-and-one-hour-mcp-waits` turned these findings into `StartRequest.DisableNativeQuestions` and `MCPServerConfig.ToolTimeout` (see the repository README, "Native Questions and Long MCP Calls"). These checks ran on launch specs produced by the adapters' own `PrepareLaunch` with a scratch driver that is not kept. Installed versions: Claude Code **2.1.290**, codex-cli **0.160.0**, OpenCode **1.17.18**.
+
+- **Tool lists** (`runs/adapter-tools-2026-10-06/summary.txt`, same capture endpoint as section 1):
+  - Claude TUI: `AskUserQuestion` absent on new and `--resume <id>` launches, present without the control. A `--disallowedTools` passed by the caller combines with the adapter's flag. Claude 2.1.290 connects MCP servers asynchronously, so the probe tool is in the first request only some of the time, with or without the control.
+  - Codex exec: `request_user_input` absent for `gpt-6-astra` and `gpt-5.5`; `request_user_input_async` still present for `gpt-6-astra`. The `tool_timeout_sec` key was accepted.
+  - OpenCode TUI: `question` absent with `{"*":"allow","question":"deny"}` (Yolo), with `{"question":"deny"}`, and on `--session <id>` resume; `probe_wait_probe` present in every case.
+- **OpenCode TUI one-hour call, closing the gap in section 4** (`runs/opencode-tui-h1-adapter/`): TUI launched from the adapter spec (`Yolo`, `DisableNativeQuestions`, `ToolTimeout` 65 min → `"timeout":3900000`), user default model DeepSeek V4 Pro. `tools/call` at 00:55:36Z, server result at 01:55:36Z (`elapsed 3600.0`), and the TUI showed the tool output and the model's reply `PROBE_DONE after 3600.0s` (`screen.txt`, after 1h 0m). The stray post-result `notifications/cancelled` from section 2 appeared again, 136 ms after the result.
+- Found while checking resume: headless Codex resume (`codex exec resume`) rejected the adapter's `--cd`. Fixed in the same ticket by emitting `--cd`/`--add-dir` before `resume`.
+
+Side effects: Claude transcripts under `~/.claude/projects/*runs-tools-w*`, Codex sessions under `~/.codex/sessions/2026/10/06/`, and OpenCode sessions in its database. No provider configuration was changed. The Codex TUI was not captured because it opened a model-announcement dialog whose answer would be saved to `~/.codex/config.toml`.
+
 ## Reproducing
 
 - `probe-server.mjs`: dependency-free stdio MCP server with one tool, `wait_probe({seconds, progress_every})`. It logs to `$PROBE_LOG`.
