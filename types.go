@@ -87,6 +87,15 @@ type StartRequest struct {
 	// permission.question=deny. Permission/approval prompts and startup dialogs
 	// are not question tools and are unaffected.
 	DisableNativeQuestions bool
+	// ClaudeAutoMemory enables Claude Code's automatic memory for this launch.
+	// The claude adapter always sets CLAUDE_CODE_DISABLE_AUTO_MEMORY, so the
+	// zero value disables auto-memory (=1) regardless of the inherited
+	// environment or autoMemoryEnabled settings, and true enables it (=0). It
+	// is applied per process, on new and resumed launches alike; an Env value
+	// for that variable that differs from the managed one is rejected.
+	// CLAUDE.md/project instructions, transcript persistence and resume are
+	// unaffected. Other adapters ignore it.
+	ClaudeAutoMemory bool
 }
 
 // OpenCodeAgentConfig defines an OpenCode agent profile entry for the config agent section.

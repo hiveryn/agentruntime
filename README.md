@@ -121,6 +121,15 @@ every caller using the marker is being uninstalled.
 - **`DisableNativeQuestions`** — remove the runtime's own ask-the-user tool for
   this launch; see
   [Native Questions and Long MCP Calls](#native-questions-and-long-mcp-calls).
+- **`ClaudeAutoMemory`** — (Claude only) enable Claude Code's automatic memory
+  for this launch. The Claude adapter always sets
+  `CLAUDE_CODE_DISABLE_AUTO_MEMORY`: `1` (disabled) when the field is false —
+  the default — and `0` (enabled) when it is true, overriding the inherited
+  environment and the user's `autoMemoryEnabled` setting. It applies on new and
+  resumed launches alike. An `Env` value for that variable that differs from the
+  managed one is rejected. Only the auto-memory feature changes: `CLAUDE.md`
+  and project instructions, transcript persistence and resume are unaffected,
+  and memories already present in a resumed transcript stay in it.
 - **`OpenCodeAgentConfig`** — (OpenCode only) agent profile definitions merged
   into the `agent` section of `OPENCODE_CONFIG_CONTENT`. Each key is the profile
   name; the value is an `OpenCodeAgentConfig` with `Description`, `Mode`,

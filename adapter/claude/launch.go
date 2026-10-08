@@ -31,6 +31,9 @@ const (
 	// autoBackgroundEnv sets when claude moves a pending MCP call to a
 	// background task (ending the turn); 0 disables it.
 	autoBackgroundEnv = "CLAUDE_CODE_MCP_AUTO_BACKGROUND_MS"
+	// autoMemoryEnv disables (1) or enables (0) claude's automatic memory,
+	// overriding the autoMemoryEnabled setting.
+	autoMemoryEnv = "CLAUDE_CODE_DISABLE_AUTO_MEMORY"
 )
 
 var managedArgs = map[string]struct{}{
@@ -162,6 +165,16 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 		// the daemon process happened to inherit.
 		"CLAUDE_CODE_FORCE_SESSION_PERSISTENCE": "1",
 	})
+	// Auto-memory is always set explicitly so the launch never depends on the
+	// caller's inherited environment or the user's autoMemoryEnabled setting.
+	autoMemory := "1"
+	if req.ClaudeAutoMemory {
+		autoMemory = "0"
+	}
+	if v, ok := req.Env[autoMemoryEnv]; ok && v != autoMemory {
+		return agentruntime.LaunchSpec{}, fmt.Errorf("env %s=%q conflicts with ClaudeAutoMemory=%t (%s=%s); remove it from env and use ClaudeAutoMemory", autoMemoryEnv, v, req.ClaudeAutoMemory, autoMemoryEnv, autoMemory)
+	}
+	env[autoMemoryEnv] = autoMemory
 	if hasToolTimeout(req.MCPServers) {
 		// In the TUI claude moves an MCP call pending for 2 min to a background
 		// task and ends the turn; keep long calls in the foreground instead.
