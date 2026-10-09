@@ -43,3 +43,8 @@
 
 - Run `make tidy && git diff --exit-code -- go.mod go.sum` before merging.
 - Run `make vet test build lint` for local preflight.
+
+
+## Target filesystem preparation
+
+`StartRequest.FileSystem` and `SetupRequest.FileSystem` optionally select the target environment for provider setup and launch artifacts. Nil retains local behavior. Callers own SSH/authentication/process lifecycle and must remove `LaunchSpec.CleanupPaths` on that same target. Never use laptop home/env/temp paths in target preparation. `FileSystem` supplies target home/config environment and private temporary writes; provider-specific config and hooks stay in their adapters. OpenCode bearer headers use `{env:NAME}`, with OAuth disabled when a bearer variable is supplied.

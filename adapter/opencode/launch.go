@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/hiveryn/agentruntime"
@@ -30,6 +29,7 @@ type ocMCPServer struct {
 	Environment map[string]string `json:"environment,omitempty"`
 	URL         string            `json:"url,omitempty"`
 	Headers     map[string]string `json:"headers,omitempty"`
+	OAuth       *bool             `json:"oauth,omitempty"`
 	Enabled     bool              `json:"enabled"`
 	// Timeout is the per-server timeout in milliseconds for tool calls (and
 	// for connecting and listing tools).
@@ -77,7 +77,7 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 	cfg := ocConfig{}
 
 	if strings.TrimSpace(req.Instructions) != "" {
-		path, err := writeInstructions(req.Instructions)
+		path, err := writeInstructions(req.Instructions, req.FileSystem)
 		if err != nil {
 			return agentruntime.LaunchSpec{}, err
 		}
@@ -262,26 +262,8 @@ func checkAgentPermissionConflict(name string, permission map[string]string, add
 	return nil
 }
 
-func writeInstructions(instructions string) (string, error) {
-	file, err := os.CreateTemp("", "agentruntime-opencode-instructions-*.md")
-	if err != nil {
-		return "", fmt.Errorf("create instructions file: %w", err)
-	}
-	path := file.Name()
-	if _, err := file.WriteString(instructions); err != nil {
-		_ = file.Close()
-		_ = os.Remove(path)
-		return "", fmt.Errorf("write instructions: %w", err)
-	}
-	if err := file.Close(); err != nil {
-		_ = os.Remove(path)
-		return "", fmt.Errorf("close instructions: %w", err)
-	}
-	if err := os.Chmod(path, 0o600); err != nil {
-		_ = os.Remove(path)
-		return "", fmt.Errorf("chmod instructions: %w", err)
-	}
-	return path, nil
+func writeInstructions(instructions string, target ...agentruntime.FileSystem) (string, error) {
+	return agentruntime.TargetFileSystem(target...).WriteTemp("agentruntime-opencode-instructions-*.md", []byte(instructions))
 }
 
 func mapMCPServer(server agentruntime.MCPServerConfig) (ocMCPServer, error) {
@@ -304,8 +286,10 @@ func mapMCPTransport(server agentruntime.MCPServerConfig) (ocMCPServer, error) {
 			Enabled: true,
 		}
 		if server.BearerTokenEnvVar != "" {
+			disabled := false
+			mapped.OAuth = &disabled
 			mapped.Headers = map[string]string{
-				"Authorization": "Bearer ${" + server.BearerTokenEnvVar + "}",
+				"Authorization": "Bearer {env:" + server.BearerTokenEnvVar + "}",
 			}
 		}
 		return mapped, nil

@@ -79,13 +79,13 @@ func (a *Adapter) EnsureSetup(_ context.Context, req agentruntime.SetupRequest) 
 		return agentruntime.SetupResult{}, fmt.Errorf("missing marker")
 	}
 
-	path := pluginPath(req.ConfigRoot, req.Marker)
+	path := pluginPath(req.ConfigRoot, req.Marker, req.FileSystem)
 	content, err := renderPlugin(req.Marker)
 	if err != nil {
 		return agentruntime.SetupResult{}, err
 	}
 
-	if data, err := os.ReadFile(path); err == nil {
+	if data, err := agentruntime.TargetFileSystem(req.FileSystem).ReadFile(path); err == nil {
 		if bytes.Contains(data, []byte(managedMarker)) {
 			if string(data) == content {
 				return agentruntime.SetupResult{Changed: false, Paths: []string{path}}, nil
@@ -94,14 +94,15 @@ func (a *Adapter) EnsureSetup(_ context.Context, req agentruntime.SetupRequest) 
 			return agentruntime.SetupResult{}, fmt.Errorf(
 				"opencode plugin file exists but is not agentruntime-managed; refusing to overwrite: %s", path)
 		}
+	} else if !os.IsNotExist(err) {
+		return agentruntime.SetupResult{}, fmt.Errorf("opencode read plugin: %w", err)
 	}
-
 	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := agentruntime.TargetFileSystem(req.FileSystem).MkdirAll(dir, 0o755); err != nil {
 		return agentruntime.SetupResult{}, fmt.Errorf("opencode mkdir: %w", err)
 	}
 
-	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+	if err := agentruntime.TargetFileSystem(req.FileSystem).WriteFile(path, []byte(content), 0o644); err != nil {
 		return agentruntime.SetupResult{}, fmt.Errorf("opencode write plugin: %w", err)
 	}
 
@@ -113,9 +114,9 @@ func (a *Adapter) RemoveSetup(_ context.Context, req agentruntime.SetupRequest) 
 		return agentruntime.SetupResult{}, fmt.Errorf("missing marker")
 	}
 
-	path := pluginPath(req.ConfigRoot, req.Marker)
+	path := pluginPath(req.ConfigRoot, req.Marker, req.FileSystem)
 
-	data, err := os.ReadFile(path)
+	data, err := agentruntime.TargetFileSystem(req.FileSystem).ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return agentruntime.SetupResult{Changed: false, Paths: []string{path}}, nil
@@ -133,29 +134,29 @@ func (a *Adapter) RemoveSetup(_ context.Context, req agentruntime.SetupRequest) 
 		return agentruntime.SetupResult{Changed: false, Paths: []string{path}}, nil
 	}
 
-	if err := os.Remove(path); err != nil {
+	if err := agentruntime.TargetFileSystem(req.FileSystem).Remove(path); err != nil {
 		return agentruntime.SetupResult{}, fmt.Errorf("opencode remove plugin: %w", err)
 	}
 
 	return agentruntime.SetupResult{Changed: true, Paths: []string{path}}, nil
 }
 
-func pluginPath(configRoot, marker string) string {
+func pluginPath(configRoot, marker string, target ...agentruntime.FileSystem) string {
 	filename := "agentruntime-" + marker + ".ts"
 	if configRoot != "" {
 		return filepath.Join(configRoot, ".config", "opencode", "plugins", filename)
 	}
-	return filepath.Join(userConfigDir(), "opencode", "plugins", filename)
+	return filepath.Join(userConfigDir(target...), "opencode", "plugins", filename)
 }
 
 // userConfigDir resolves the XDG-compliant user config base directory.
 // It intentionally does NOT use os.UserConfigDir() because that returns
 // ~/Library/Application Support on macOS, which is not where OpenCode looks.
-func userConfigDir() string {
-	if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
+func userConfigDir(target ...agentruntime.FileSystem) string {
+	if xdg := agentruntime.TargetFileSystem(target...).Getenv("XDG_CONFIG_HOME"); xdg != "" {
 		return xdg
 	}
-	home, err := os.UserHomeDir()
+	home, err := agentruntime.TargetFileSystem(target...).UserHomeDir()
 	if err != nil || home == "" {
 		return ""
 	}

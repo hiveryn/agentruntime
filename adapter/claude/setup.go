@@ -48,15 +48,15 @@ func (a *Adapter) EnsureSetup(_ context.Context, req agentruntime.SetupRequest) 
 		return agentruntime.SetupResult{}, fmt.Errorf("missing hook command")
 	}
 
-	path, err := settingsPath(req.ConfigRoot)
+	path, err := settingsPath(req.ConfigRoot, req.FileSystem)
 	if err != nil {
 		return agentruntime.SetupResult{}, err
 	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+	if err := agentruntime.TargetFileSystem(req.FileSystem).MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return agentruntime.SetupResult{}, err
 	}
 
-	state, err := readJSONMap(path)
+	state, err := readJSONMap(path, req.FileSystem)
 	if err != nil {
 		if !errors.Is(err, os.ErrNotExist) {
 			return agentruntime.SetupResult{}, err
@@ -73,7 +73,7 @@ func (a *Adapter) EnsureSetup(_ context.Context, req agentruntime.SetupRequest) 
 	if bytes.Equal(before, after) {
 		return agentruntime.SetupResult{Paths: []string{path}}, nil
 	}
-	if err := os.WriteFile(path, after, 0o600); err != nil {
+	if err := agentruntime.TargetFileSystem(req.FileSystem).WriteFile(path, after, 0o600); err != nil {
 		return agentruntime.SetupResult{}, err
 	}
 
@@ -85,12 +85,12 @@ func (a *Adapter) RemoveSetup(_ context.Context, req agentruntime.SetupRequest) 
 		return agentruntime.SetupResult{}, fmt.Errorf("missing marker")
 	}
 
-	path, err := settingsPath(req.ConfigRoot)
+	path, err := settingsPath(req.ConfigRoot, req.FileSystem)
 	if err != nil {
 		return agentruntime.SetupResult{}, err
 	}
 
-	state, err := readJSONMap(path)
+	state, err := readJSONMap(path, req.FileSystem)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return agentruntime.SetupResult{Paths: []string{path}}, nil
@@ -107,7 +107,7 @@ func (a *Adapter) RemoveSetup(_ context.Context, req agentruntime.SetupRequest) 
 	if bytes.Equal(before, after) {
 		return agentruntime.SetupResult{Paths: []string{path}}, nil
 	}
-	if err := os.WriteFile(path, after, 0o600); err != nil {
+	if err := agentruntime.TargetFileSystem(req.FileSystem).WriteFile(path, after, 0o600); err != nil {
 		return agentruntime.SetupResult{}, err
 	}
 
@@ -215,19 +215,19 @@ func removeHookCommand(root map[string]any, marker string) {
 	}
 }
 
-func settingsPath(configRoot string) (string, error) {
+func settingsPath(configRoot string, target ...agentruntime.FileSystem) (string, error) {
 	if configRoot != "" {
 		return filepath.Join(configRoot, "settings.json"), nil
 	}
-	home, err := os.UserHomeDir()
+	home, err := agentruntime.TargetFileSystem(target...).UserHomeDir()
 	if err != nil {
 		return "", err
 	}
 	return filepath.Join(home, ".claude", "settings.json"), nil
 }
 
-func readJSONMap(path string) (map[string]any, error) {
-	data, err := os.ReadFile(path)
+func readJSONMap(path string, target ...agentruntime.FileSystem) (map[string]any, error) {
+	data, err := agentruntime.TargetFileSystem(target...).ReadFile(path)
 	if err != nil {
 		return nil, err
 	}

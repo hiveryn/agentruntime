@@ -272,7 +272,7 @@ func TestPrepareLaunch_WithMCPHTTP(t *testing.T) {
 	if srv.URL != "http://my-mcp.example.com" {
 		t.Errorf("URL: got %q", srv.URL)
 	}
-	if !strings.Contains(srv.Headers["Authorization"], "MCP_TOKEN") {
+	if srv.Headers["Authorization"] != "Bearer {env:MCP_TOKEN}" || srv.OAuth == nil || *srv.OAuth {
 		t.Errorf("Authorization header: got %q", srv.Headers["Authorization"])
 	}
 }

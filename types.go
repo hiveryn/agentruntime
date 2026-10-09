@@ -46,6 +46,8 @@ const (
 )
 
 type StartRequest struct {
+	FileSystem FileSystem
+
 	ID      string
 	Agent   AgentKind
 	Command string
@@ -192,6 +194,8 @@ type HookCommand struct {
 }
 
 type SetupRequest struct {
+	FileSystem FileSystem
+
 	Marker     string
 	ConfigRoot string
 	Hook       HookCommand

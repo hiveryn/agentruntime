@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/hiveryn/agentruntime"
@@ -116,7 +115,7 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 		return agentruntime.LaunchSpec{}, err
 	}
 	if len(req.MCPServers) > 0 {
-		path, err := writeMCPConfig(req.MCPServers)
+		path, err := writeMCPConfig(req.MCPServers, req.FileSystem)
 		if err != nil {
 			return agentruntime.LaunchSpec{}, err
 		}
@@ -231,7 +230,7 @@ func hasToolTimeout(servers []agentruntime.MCPServerConfig) bool {
 	return false
 }
 
-func writeMCPConfig(servers []agentruntime.MCPServerConfig) (string, error) {
+func writeMCPConfig(servers []agentruntime.MCPServerConfig, target ...agentruntime.FileSystem) (string, error) {
 	config := mcpConfig{MCPServers: make(map[string]mcpServer, len(servers))}
 	for _, server := range servers {
 		mapped, err := mapMCPServer(server)
@@ -246,25 +245,7 @@ func writeMCPConfig(servers []agentruntime.MCPServerConfig) (string, error) {
 		return "", fmt.Errorf("marshal mcp config: %w", err)
 	}
 
-	file, err := os.CreateTemp("", "agentruntime-claude-mcp-*.json")
-	if err != nil {
-		return "", fmt.Errorf("create mcp config: %w", err)
-	}
-	path := file.Name()
-	if _, err := file.Write(data); err != nil {
-		_ = file.Close()
-		_ = os.Remove(path)
-		return "", fmt.Errorf("write mcp config: %w", err)
-	}
-	if err := file.Close(); err != nil {
-		_ = os.Remove(path)
-		return "", fmt.Errorf("close mcp config: %w", err)
-	}
-	if err := os.Chmod(path, 0o600); err != nil {
-		_ = os.Remove(path)
-		return "", fmt.Errorf("chmod mcp config: %w", err)
-	}
-	return path, nil
+	return agentruntime.TargetFileSystem(target...).WriteTemp("agentruntime-claude-mcp-*.json", data)
 }
 
 func mapMCPServer(server agentruntime.MCPServerConfig) (mcpServer, error) {

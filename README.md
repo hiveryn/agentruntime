@@ -582,3 +582,13 @@ func main() {
 ## Current Consumers
 
 - [Cortex](https://github.com/kareemaly/cortex)
+
+
+### Preparing on another machine
+
+Supply a target `FileSystem` on both `SetupRequest` and `StartRequest` to write
+hooks and launch artifacts in another environment. Nil uses the local OS.
+`UserHomeDir` and `Getenv` must describe the target account, and `WriteTemp` must
+create private files there. Cleanup paths belong to that filesystem. The caller
+owns transport, authentication, process persistence and cleanup; agentruntime
+does not start an SSH connection or install a remote service.
