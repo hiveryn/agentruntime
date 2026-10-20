@@ -136,3 +136,29 @@ func TestConfirmMessageReadsRolloutClientID(t *testing.T) {
 		t.Fatalf("capability %+v", cap)
 	}
 }
+
+func TestAcceptedQueueWriteWithLostResponseIsFoundByStableID(t *testing.T) {
+	adapter := New(DefaultOptions())
+	command, queue := fakeCodex(t)
+	home := t.TempDir()
+	req := agentruntime.DeliverRequest{Command: command, Env: map[string]string{"CODEX_HOME": home, "FAKE_EXPECT_HOME": home, "FAKE_QUEUE_FILE": queue, "FAKE_LOSE_ADD_RESPONSE": "1"}, NativeSessionID: "thread", MessageID: "stable", Text: "hello"}
+	if _, err := adapter.DeliverMessage(context.Background(), req); err == nil {
+		t.Fatal("expected lost response")
+	}
+	receipt, err := adapter.ConfirmMessage(context.Background(), agentruntime.ConfirmRequest{Command: command, Env: req.Env, NativeSessionID: "thread", MessageID: "stable"})
+	if err != nil || !receipt.Queued {
+		t.Fatalf("receipt: %+v %v", receipt, err)
+	}
+	result, err := adapter.DeliverMessage(context.Background(), req)
+	if err != nil || result.Outcome != agentruntime.DeliverAlreadyPresent {
+		t.Fatalf("retry: %+v %v", result, err)
+	}
+	data, err := os.ReadFile(queue)
+	var entries []any
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(data, &entries); err != nil || len(entries) != 1 {
+		t.Fatalf("duplicate queue: %s %v", data, err)
+	}
+}

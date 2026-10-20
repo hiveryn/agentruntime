@@ -11,10 +11,10 @@ import (
 // mean; adapters own the provider mechanics. Evidence and the behaviour matrix
 // behind this contract are in research/2026-10-20-message-delivery/.
 //
-// Delivery is at-least-once from the caller's side. The caller keeps a stable
+// Delivery can be ambiguous on transport failure. The caller keeps a stable
 // MessageID per message, checks the provider's own record (ConfirmMessage)
 // before any redelivery and redelivers under the same identity, which makes
-// delivery effectively once outside the documented provider crash windows. No
+// receipt lookup possible outside the documented provider crash windows. No
 // adapter promises exactly-once, and none promises that a message appearing
 // in the conversation was acted upon.
 
@@ -92,9 +92,9 @@ type DeliverRequest struct {
 	// into the provider (Codex clientUserMessageId) or embedded in the text,
 	// so ConfirmMessage can find it.
 	MessageID string
-	// ProviderRef is the provider-side identity minted by an earlier attempt
-	// of this same message to this same session, or empty on the first
-	// attempt (OpenCode message id).
+	// ProviderRef is the provider-side identity. With MessagePreparer (OpenCode),
+	// prepare and durably save it before DeliverMessage, including the first
+	// attempt. Other providers may return an additional reference on acceptance.
 	ProviderRef string
 	Text        string
 }
@@ -154,6 +154,14 @@ type MessageDeliverer interface {
 	MessageCapability() MessageCapability
 	DeliverMessage(context.Context, DeliverRequest) (DeliverResult, error)
 	ConfirmMessage(context.Context, ConfirmRequest) (MessageReceipt, error)
+}
+
+// MessagePreparer chooses a provider identity without sending. Callers persist
+// the returned reference and attempt before calling DeliverMessage. A previous
+// reference must be inspected before replacement. Implemented by OpenCode,
+// whose ascending identifiers cannot be derived from the stable MessageID.
+type MessagePreparer interface {
+	PrepareMessage(context.Context, DeliverRequest) (string, error)
 }
 
 // MessageHookTimeout resolves the Claude waiter timeout of a request.

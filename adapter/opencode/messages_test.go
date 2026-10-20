@@ -92,6 +92,13 @@ func TestDeliverMessagePostsOnceAndNeverResendsAnExistingID(t *testing.T) {
 	portNum := server.Listener.Addr().(*net.TCPAddr).Port
 	req := agentruntime.DeliverRequest{NativeSessionID: "ses_1", ServerPort: portNum, ServerPassword: "pw", MessageID: "m-1", Text: "Hiveryn message m-1: hello"}
 
+	if _, err := adapter.DeliverMessage(context.Background(), req); err == nil {
+		t.Fatal("unprepared delivery accepted")
+	}
+	req.ProviderRef, _ = adapter.PrepareMessage(context.Background(), req)
+	if len(fake.posts) != 0 {
+		t.Fatal("preparation sent a message")
+	}
 	res, err := adapter.DeliverMessage(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
@@ -110,8 +117,10 @@ func TestDeliverMessagePostsOnceAndNeverResendsAnExistingID(t *testing.T) {
 	}
 	// A ref that never landed gets a fresh, later id.
 	req.ProviderRef = "msg_000000000000AAAAAAAAAAAAAA"
+	oldRef := req.ProviderRef
+	req.ProviderRef, _ = adapter.PrepareMessage(context.Background(), req)
 	fresh, err := adapter.DeliverMessage(context.Background(), req)
-	if err != nil || fresh.Outcome != agentruntime.DeliverAccepted || fresh.ProviderRef == req.ProviderRef || len(fake.posts) != 2 {
+	if err != nil || fresh.Outcome != agentruntime.DeliverAccepted || fresh.ProviderRef == oldRef || len(fake.posts) != 2 {
 		t.Fatalf("fresh %+v %v posts %d", fresh, err, len(fake.posts))
 	}
 	// Wrong password is an error, not a silent miss.
@@ -188,5 +197,71 @@ func TestConfirmMessageReadsDatabase(t *testing.T) {
 	}
 	if cap := adapter.MessageCapability(); cap.Mode != agentruntime.MessageDeliveryPush || !cap.GateOnIdle {
 		t.Fatalf("capability %+v", cap)
+	}
+}
+
+func TestLostResponseKeepsPreparedIdentityAndDoesNotAppendParts(t *testing.T) {
+	adapter := New(DefaultOptions())
+	dbPath := newTestDB(t, t.TempDir())
+	insertSession(t, dbPath, "ses_1")
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = db.Close() }()
+	var posts int
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			id := strings.TrimPrefix(r.URL.Path, "/session/ses_1/message/")
+			var found string
+			if err := db.QueryRow(`SELECT id FROM message WHERE id = ?`, id).Scan(&found); err != nil {
+				w.WriteHeader(404)
+				return
+			}
+			_ = json.NewEncoder(w).Encode(map[string]any{"info": map[string]any{"id": found}, "parts": []any{}})
+			return
+		}
+		var body struct {
+			MessageID string `json:"messageID"`
+			Parts     []any  `json:"parts"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Error(err)
+			return
+		}
+		posts++
+		if _, err := db.Exec(`INSERT INTO message (id, session_id, time_created, data) VALUES (?, ?, ?, ?)`, body.MessageID, "ses_1", time.Now().UnixMilli(), `{"role":"user"}`); err != nil {
+			t.Error(err)
+		}
+		// Acceptance is durable, but no response reaches the caller.
+		conn, _, err := w.(http.Hijacker).Hijack()
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		_ = conn.Close()
+	}))
+	defer server.Close()
+	req := agentruntime.DeliverRequest{NativeSessionID: "ses_1", ServerPort: server.Listener.Addr().(*net.TCPAddr).Port, ServerPassword: "pw", MessageID: "stable", Text: "Hiveryn message stable: hello"}
+	req.ProviderRef, err = adapter.PrepareMessage(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	saved := req.ProviderRef // caller persists this before the request
+	if _, err := adapter.DeliverMessage(context.Background(), req); err == nil {
+		t.Fatal("expected lost response")
+	}
+	adapter = New(DefaultOptions()) // no in-memory identity recovery
+	receipt, err := adapter.ConfirmMessage(context.Background(), agentruntime.ConfirmRequest{TranscriptHandle: dbPath + pathSep + "ses_1", ProviderRef: saved})
+	if err != nil || !receipt.Appeared {
+		t.Fatalf("lost response receipt: %+v %v", receipt, err)
+	}
+	req.ProviderRef, err = adapter.PrepareMessage(context.Background(), req)
+	if err != nil || req.ProviderRef != saved {
+		t.Fatalf("identity changed: %s %v", req.ProviderRef, err)
+	}
+	result, err := adapter.DeliverMessage(context.Background(), req)
+	if err != nil || result.Outcome != agentruntime.DeliverAlreadyPresent || posts != 1 {
+		t.Fatalf("duplicate parts: %+v %v posts=%d", result, err, posts)
 	}
 }

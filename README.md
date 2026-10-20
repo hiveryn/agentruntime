@@ -294,8 +294,8 @@ plumbing, on new and resumed launches alike:
 | Adapter  | Launch plumbing | Route | Caller must gate on idle |
 |----------|-----------------|-------|--------------------------|
 | Claude   | Per-launch `--settings` file adding SessionStart and Stop `asyncRewake` command hooks (timeout `HookWaitTimeout`, default 24 h). The node waiter long-polls `$AGENTRUNTIME_HOOK_ENDPOINT/claude/wait` with `{"hook": <hook JSON>, "env": {"AGENTRUNTIME_SESSION_ID": ...}}`; a 200 `{"id","text"}` makes it print the text to stderr and exit 2, which wakes the idle model with the text; 204/404/400 or no endpoint exit 0; transport errors are retried in-process, since nothing re-arms a session until its next hook event | Pull: `ingest.Mailbox` keeps one waiter per caller session (newest wins, the superseded one gets 204); `Deliver` hands the message to it | Yes — otherwise the message joins the running turn and displaces the task's reply. A waiter past its timeout, or a session that fired no hook since launch, has no waiter until its next Stop or resume |
-| Codex    | None | Push: `DeliverMessage` runs an embedded `codex app-server` (experimental API) and calls `thread/queue/add` with the caller's id as `clientUserMessageId` after `thread/queue/list`, so a retry never queues a second copy | No — the queue runs the item as its own turn when the thread is idle, also after resume. After an Esc-interrupted turn it waits for the user's next completed turn |
-| OpenCode | `--port ServerPort` and `OPENCODE_SERVER_PASSWORD=ServerPassword` (both required) | Push: `GET /session/:id/message/:ref` for the previous attempt's id, then `POST /session/:id/prompt_async` with a fresh ascending `messageID` (an earlier id that never landed would sort before newer messages and not run); basic auth user `opencode` | Yes — a busy or permission-waiting session merges it into the running loop |
+| Codex    | None | Push: `DeliverMessage` runs an embedded `codex app-server` (experimental API) and calls `thread/queue/add` with the caller's id as `clientUserMessageId` after `thread/queue/list`, so a queued item is not added again | No — the queue runs the item as its own turn when the thread is idle, also after resume. After an Esc-interrupted turn it waits for the user's next completed turn |
+| OpenCode | `--port ServerPort` and `OPENCODE_SERVER_PASSWORD=ServerPassword` (both required) | Push: `PrepareMessage` checks the previous id and chooses an ascending `messageID`; persist it before `DeliverMessage`, which checks again then posts with that exact id (an earlier id that never landed would sort before newer messages and not run); basic auth user `opencode` | Yes — a busy or permission-waiting session merges it into the running loop |
 
 **`MessageDeliverer`** (implemented by all three adapters): `MessageCapability`
 (mechanism, pull/push, `GateOnIdle`, coverage statement), `DeliverMessage`
@@ -321,7 +321,16 @@ scans every verified segment of the thread (`LocateRolloutSegments`, from
 when the thread id is not given. A segment that cannot be read or verified is
 an error, never an absent receipt.
 
-Known windows: Claude does not replay a message it enqueued but had not run
+Before sending, persist recipient identity, attempt budget and the provider
+reference returned by the optional `MessagePreparer` interface (OpenCode).
+OpenCode delivery refuses an empty reference. Preparation never sends. A lost
+POST response therefore cannot lose the identity needed for receipt lookup;
+a retry of an existing ID returns `already_present` without appending parts.
+Transport errors mean unknown acceptance, not proven non-delivery.
+
+Known windows: a delayed OpenCode request can land after a lookup reports
+absence; concurrent sends can race the lookup. Serialize delivery and bound
+uncertain retries. Claude does not replay a message it enqueued but had not run
 when its process was killed (redeliver when the record lacks it after the next
 idle); Codex starts the turn before deleting the queue row, so a crash between
 the two can run the item twice; an OpenCode 204 is acceptance, not processing.

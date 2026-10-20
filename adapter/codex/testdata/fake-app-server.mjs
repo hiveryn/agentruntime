@@ -32,6 +32,7 @@ createInterface({ input: process.stdin }).on("line", (line) => {
     const item = { id: "qs-" + (q.length + 1), threadId: msg.params.threadId, clientUserMessageId: msg.params.clientUserMessageId, text: msg.params.input[0].text };
     q.push(item);
     save(q);
+    if (process.env.FAKE_LOSE_ADD_RESPONSE === "1") process.exit(0);
     return send({ jsonrpc: "2.0", id: msg.id, result: { queuedSubmission: item } });
   }
   send({ jsonrpc: "2.0", id: msg.id, error: { code: -32601, message: "unknown " + msg.method } });

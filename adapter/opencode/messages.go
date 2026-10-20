@@ -40,34 +40,53 @@ func (a *Adapter) MessageCapability() agentruntime.MessageCapability {
 		Coverage: "Pushed to the TUI's embedded server over loopback; push only while idle, or the message merges into the running loop and displaces the task's reply. " +
 			"Requires the launch's --port and server password; a session started without them cannot be reached. " +
 			"Receipt is the message row in OpenCode's database and an assistant message whose parentID is the message id. " +
-			"A 204 is acceptance only. Verified on OpenCode 1.17.18.",
+			"PrepareMessage chooses the identity before the caller persists its attempt; DeliverMessage never replaces it. " +
+			"A 204 is acceptance only. A delayed POST can still land after an absent lookup; serialize attempts and bound ambiguous retries. Verified on OpenCode 1.17.18.",
 	}
 }
 
-// DeliverMessage looks the previous attempt's message up and, when absent,
-// posts the text under a fresh ascending message id.
-func (a *Adapter) DeliverMessage(ctx context.Context, req agentruntime.DeliverRequest) (agentruntime.DeliverResult, error) {
+// PrepareMessage checks the previous identity before choosing a fresh ascending
+// id. It never posts; the caller can durably save the identity before sending.
+func (a *Adapter) PrepareMessage(ctx context.Context, req agentruntime.DeliverRequest) (string, error) {
 	if req.NativeSessionID == "" || strings.TrimSpace(req.Text) == "" {
-		return agentruntime.DeliverResult{}, fmt.Errorf("opencode: deliver message: session id and text are required")
+		return "", fmt.Errorf("opencode: deliver message: session id and text are required")
 	}
 	if req.ServerPort <= 0 || req.ServerPassword == "" {
-		return agentruntime.DeliverResult{}, fmt.Errorf("opencode: deliver message: the session was not launched with a message-delivery server port and password")
+		return "", fmt.Errorf("opencode: deliver message: the session was not launched with a message-delivery server port and password")
 	}
 	client := &http.Client{Timeout: requestTimeout}
 	base := "http://127.0.0.1:" + strconv.Itoa(req.ServerPort)
 	if req.ProviderRef != "" {
 		status, err := a.messageStatus(ctx, client, base, req.ServerPassword, req.NativeSessionID, req.ProviderRef)
 		if err != nil {
-			return agentruntime.DeliverResult{}, err
+			return "", err
 		}
 		if status == http.StatusOK {
-			return agentruntime.DeliverResult{Outcome: agentruntime.DeliverAlreadyPresent, ProviderRef: req.ProviderRef}, nil
+			return req.ProviderRef, nil
 		}
 	}
-	messageID, err := newAscendingMessageID(time.Now())
+	return newAscendingMessageID(time.Now())
+}
+
+// DeliverMessage uses the prepared identity unchanged. Lookup prevents duplicate
+// text parts when a previous POST succeeded but its response was lost.
+func (a *Adapter) DeliverMessage(ctx context.Context, req agentruntime.DeliverRequest) (agentruntime.DeliverResult, error) {
+	if req.NativeSessionID == "" || strings.TrimSpace(req.Text) == "" || req.ServerPort <= 0 || req.ServerPassword == "" {
+		return agentruntime.DeliverResult{}, fmt.Errorf("opencode: deliver message: session, text, server port and password are required")
+	}
+	if req.ProviderRef == "" {
+		return agentruntime.DeliverResult{}, fmt.Errorf("opencode: prepare and persist a provider reference before delivery")
+	}
+	client := &http.Client{Timeout: requestTimeout}
+	base := "http://127.0.0.1:" + strconv.Itoa(req.ServerPort)
+	status, err := a.messageStatus(ctx, client, base, req.ServerPassword, req.NativeSessionID, req.ProviderRef)
 	if err != nil {
 		return agentruntime.DeliverResult{}, err
 	}
+	if status == http.StatusOK {
+		return agentruntime.DeliverResult{Outcome: agentruntime.DeliverAlreadyPresent, ProviderRef: req.ProviderRef}, nil
+	}
+	messageID := req.ProviderRef
 	body, _ := json.Marshal(map[string]any{
 		"messageID": messageID,
 		"parts":     []map[string]any{{"type": "text", "text": req.Text}},
