@@ -2,8 +2,8 @@ package codex
 
 import (
 	"context"
-	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/hiveryn/agentruntime"
@@ -40,18 +40,11 @@ func TestParseUsageMissingFile(t *testing.T) {
 	}
 }
 
-// writeRollout creates an empty rollout file at sessions/<bucket>/rollout-<ts>-<id>.jsonl.
+// writeRollout creates a rollout file holding only its session_meta line at
+// sessions/<bucket>/rollout-<ts>-<id>.jsonl.
 func writeRollout(t *testing.T, root, bucket, ts, id string) string {
 	t.Helper()
-	dir := filepath.Join(root, "sessions", bucket)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	path := filepath.Join(dir, "rollout-"+ts+"-"+id+".jsonl")
-	if err := os.WriteFile(path, []byte("{}\n"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	return path
+	return writeSegment(t, root, bucket, ts, id, "", "")
 }
 
 func TestLocateTranscript(t *testing.T) {
@@ -97,7 +90,8 @@ func TestLocateTranscriptNotFound(t *testing.T) {
 func TestLocateTranscriptAmbiguous(t *testing.T) {
 	root := t.TempDir()
 	id := "019eb65a-a50a-7353-b9ec-88fd2de2d323"
-	// Same session id under two different date buckets (e.g. a resumed session).
+	// Two first files of the same thread under two date buckets (a copied
+	// rollout): neither can be told to be the record.
 	writeRollout(t, root, filepath.Join("2026", "06", "11"), "2026-06-11T11-04-14", id)
 	writeRollout(t, root, filepath.Join("2026", "06", "12"), "2026-06-12T09-00-00", id)
 
@@ -106,7 +100,7 @@ func TestLocateTranscriptAmbiguous(t *testing.T) {
 		NativeSessionID: id,
 		ConfigRoot:      root,
 	})
-	if err == nil {
-		t.Fatal("expected ambiguous-match error")
+	if err == nil || !strings.Contains(err.Error(), "ambiguous rollout segment") {
+		t.Fatalf("expected ambiguous-match error, got %v", err)
 	}
 }

@@ -63,10 +63,16 @@ func (a *Adapter) ConfirmMessage(_ context.Context, req agentruntime.ConfirmRequ
 			continue
 		}
 		var rec struct {
-			Type string `json:"type"`
+			Type      string `json:"type"`
+			Timestamp string `json:"timestamp"`
 		}
 		if err := json.Unmarshal(line, &rec); err != nil {
 			continue
+		}
+		if rec.Timestamp != "" {
+			if at, err := time.Parse(time.RFC3339Nano, rec.Timestamp); err == nil && at.After(receipt.RecordedThrough) {
+				receipt.RecordedThrough = at
+			}
 		}
 		switch rec.Type {
 		case "user":

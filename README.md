@@ -308,7 +308,18 @@ and — when not yet recorded — whether the queue still holds it (`Queued`);
 OpenCode the message row in its database and an assistant message whose
 `parentID` is the message id. `Appeared` means the message is in the
 conversation record and `Acknowledged` that the agent replied after it; neither
-means the agent acted on it.
+means the agent acted on it. `RecordedThrough` is the newest entry time of the
+record that was inspected: an absent receipt is authoritative only when the
+record reaches past the hand-off, otherwise the evidence is stale (an old
+segment, an unflushed file) and says nothing.
+
+Codex records a resumed thread in a new rollout segment
+(`rollout-<ts>-<thread>_<segment>.jsonl`, see Usage Accounting), and a message
+may have run in an older segment before a later resume, so `ConfirmMessage`
+scans every verified segment of the thread (`LocateRolloutSegments`, from
+`Env`'s `CODEX_HOME` and `NativeSessionID`); the handle alone is scanned only
+when the thread id is not given. A segment that cannot be read or verified is
+an error, never an absent receipt.
 
 Known windows: Claude does not replay a message it enqueued but had not run
 when its process was killed (redeliver when the record lacks it after the next
@@ -411,9 +422,18 @@ runtime, so it is empty for them pre-launch — Codex usage is located from the
 session id on `Event.NativeID` instead.
 
 Codex normalization notes: rollouts live date-bucketed under
-`$CODEX_HOME/sessions/`, so `LocateTranscript` globs for `rollout-…-<id>.jsonl`
-rather than building a fixed path. Token totals are cumulative per `token_count`
-event (last-event-wins, not summed). Codex's `input_tokens` includes cached and
+`$CODEX_HOME/sessions/`. A thread's first file is `rollout-<ts>-<id>.jsonl`;
+since the paginated history mode (0.16x) each `codex resume` starts a new
+segment `rollout-<ts>-<id>_<segment id>.jsonl` whose `session_meta` still names
+the thread as `payload.id` and whose `history_base` names the segment it
+continues. `LocateRolloutSegments` (codex package) walks the tree, verifies
+every candidate's identity from its `session_meta` (a pre-session_meta 2025
+rollout from its top-level `id`) rather than from the filename, excludes other
+threads, and errors on a file it cannot verify or on two files claiming the
+same segment; `LocateTranscript` returns the newest segment, where new entries
+land and where token totals are current (they are cumulative across segments,
+per `token_count` event, last-event-wins, not summed; `Messages` counts only
+that segment). Codex's `input_tokens` includes cached and
 `output_tokens` includes reasoning, so usage is normalized to match the struct's
 semantics: `InputTokens = input − cached`, `OutputTokens = output`,
 `CacheReadTokens = cached`, `CacheWriteTokens = 0`.

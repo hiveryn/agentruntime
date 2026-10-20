@@ -175,8 +175,8 @@ func TestConfirmMessageReadsTranscript(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "t.jsonl")
 	lines := []string{
-		`{"type":"user","message":{"role":"user","content":"do the task"},"turnOrigin":"human"}`,
-		`{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"done"}]}}`,
+		`{"type":"user","timestamp":"2026-10-20T08:00:00.000Z","message":{"role":"user","content":"do the task"},"turnOrigin":"human"}`,
+		`{"type":"assistant","timestamp":"2026-10-20T08:00:05.000Z","message":{"role":"assistant","content":[{"type":"text","text":"done"}]}}`,
 		`{"type":"queue-operation","op":"enqueue","content":"Hiveryn message 5d1e-aaa: Ticket X"}`,
 	}
 	if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0o600); err != nil {
@@ -186,12 +186,17 @@ func TestConfirmMessageReadsTranscript(t *testing.T) {
 	if err != nil || receipt.Appeared || receipt.Acknowledged {
 		t.Fatalf("queued only: %+v %v", receipt, err)
 	}
-	lines = append(lines, `{"type":"user","turnOrigin":"task_notification","message":{"role":"user","content":"<system-reminder>Hiveryn message 5d1e-aaa: Ticket X</system-reminder>"}}`)
+	// The record reaches the newest timestamped entry (entries without one
+	// do not move it).
+	if want := time.Date(2026, 10, 20, 8, 0, 5, 0, time.UTC); !receipt.RecordedThrough.Equal(want) {
+		t.Fatalf("recorded through %v, want %v", receipt.RecordedThrough, want)
+	}
+	lines = append(lines, `{"type":"user","timestamp":"2026-10-20T08:10:00.000Z","turnOrigin":"task_notification","message":{"role":"user","content":"<system-reminder>Hiveryn message 5d1e-aaa: Ticket X</system-reminder>"}}`)
 	if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	receipt, err = adapter.ConfirmMessage(context.Background(), agentruntime.ConfirmRequest{TranscriptHandle: path, MessageID: "5d1e-aaa"})
-	if err != nil || !receipt.Appeared || receipt.Acknowledged {
+	if err != nil || !receipt.Appeared || receipt.Acknowledged || !receipt.RecordedThrough.Equal(time.Date(2026, 10, 20, 8, 10, 0, 0, time.UTC)) {
 		t.Fatalf("appeared: %+v %v", receipt, err)
 	}
 	lines = append(lines, `{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"ACK"}]}}`)

@@ -134,10 +134,17 @@ type ConfirmRequest struct {
 // message is in the conversation record; Acknowledged means the agent produced
 // a reply after it. Neither means the agent did what the message asked. Queued
 // means the provider still holds it undelivered (Codex queue).
+//
+// RecordedThrough is the time of the newest entry in the record that was
+// inspected (zero when the record carries no times, or is empty). A receipt
+// that did not appear is authoritative only when the record reaches past the
+// hand-off: a record ending before it is stale evidence — an old segment, an
+// unflushed file, the wrong file — and says nothing about the message.
 type MessageReceipt struct {
-	Appeared     bool
-	Acknowledged bool
-	Queued       bool
+	Appeared        bool
+	Acknowledged    bool
+	Queued          bool
+	RecordedThrough time.Time
 }
 
 // MessageDeliverer is implemented by adapters that can deliver messages into

@@ -180,7 +180,7 @@ func TestConfirmMessageReadsDatabase(t *testing.T) {
 	}
 	insert("msg_e", "assistant", "msg_c", 5, 2000)
 	receipt, err = adapter.ConfirmMessage(context.Background(), agentruntime.ConfirmRequest{TranscriptHandle: handle, MessageID: "m-1", ProviderRef: "msg_c"})
-	if err != nil || !receipt.Appeared || !receipt.Acknowledged {
+	if err != nil || !receipt.Appeared || !receipt.Acknowledged || !receipt.RecordedThrough.Equal(time.UnixMilli(5).UTC()) {
 		t.Fatalf("acknowledged = %+v %v", receipt, err)
 	}
 	if receipt, err := adapter.ConfirmMessage(context.Background(), agentruntime.ConfirmRequest{TranscriptHandle: handle, MessageID: "m-1"}); err != nil || receipt.Appeared {

@@ -130,7 +130,7 @@ func (a *Adapter) ConfirmMessage(_ context.Context, req agentruntime.ConfirmRequ
 		return agentruntime.MessageReceipt{}, fmt.Errorf("opencode: confirm message: open db: %w", err)
 	}
 	defer func() { _ = db.Close() }()
-	rows, err := db.Query(`SELECT id, data FROM message WHERE session_id = ? ORDER BY time_created ASC, id ASC`, sessionID)
+	rows, err := db.Query(`SELECT id, time_created, data FROM message WHERE session_id = ? ORDER BY time_created ASC, id ASC`, sessionID)
 	if err != nil {
 		return agentruntime.MessageReceipt{}, fmt.Errorf("opencode: confirm message: query messages: %w", err)
 	}
@@ -138,9 +138,13 @@ func (a *Adapter) ConfirmMessage(_ context.Context, req agentruntime.ConfirmRequ
 	var receipt agentruntime.MessageReceipt
 	for rows.Next() {
 		var id string
+		var created int64
 		var raw []byte
-		if err := rows.Scan(&id, &raw); err != nil {
+		if err := rows.Scan(&id, &created, &raw); err != nil {
 			return agentruntime.MessageReceipt{}, fmt.Errorf("opencode: confirm message: scan row: %w", err)
+		}
+		if at := time.UnixMilli(created).UTC(); created > 0 && at.After(receipt.RecordedThrough) {
+			receipt.RecordedThrough = at
 		}
 		if id == req.ProviderRef {
 			receipt.Appeared = true

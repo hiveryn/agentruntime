@@ -74,24 +74,38 @@ func (a *Adapter) DeliverMessage(ctx context.Context, req agentruntime.DeliverRe
 	return agentruntime.DeliverResult{Outcome: agentruntime.DeliverAccepted, ProviderRef: result.QueuedSubmission.ID}, nil
 }
 
-// ConfirmMessage reads the rollout for the user message carrying the id as
-// client_id and an agent message after it; when it has not appeared and the
-// thread is known, it also reports whether the queue still holds it.
+// ConfirmMessage reads the thread's rollout for the user message carrying the
+// id as client_id and an agent message after it; when it has not appeared and
+// the thread is known, it also reports whether the queue still holds it.
+//
+// The record of a thread is every verified rollout segment under its
+// CODEX_HOME (rollout.go): a resumed thread continues in a new file, and the
+// message may have run in an older segment before a later resume. With
+// NativeSessionID set the segments are located from req.Env's CODEX_HOME;
+// TranscriptHandle alone scans that one file. A segment that cannot be read
+// is an error, never an absent receipt.
 func (a *Adapter) ConfirmMessage(ctx context.Context, req agentruntime.ConfirmRequest) (agentruntime.MessageReceipt, error) {
 	if req.MessageID == "" {
 		return agentruntime.MessageReceipt{}, fmt.Errorf("codex: confirm message: message id is required")
 	}
-	var receipt agentruntime.MessageReceipt
-	if req.TranscriptHandle != "" {
-		var err error
-		if receipt, err = scanRollout(req.TranscriptHandle, req.MessageID); err != nil {
-			return agentruntime.MessageReceipt{}, err
+	var paths []string
+	if req.NativeSessionID != "" {
+		segments, err := a.LocateRolloutSegments(ctx, agentruntime.LocateRequest{NativeSessionID: req.NativeSessionID, ConfigRoot: a.ConfigRoot(req.Env)})
+		if err != nil {
+			return agentruntime.MessageReceipt{}, fmt.Errorf("codex: confirm message: %w", err)
 		}
-		if receipt.Appeared {
-			return receipt, nil
+		for _, segment := range segments {
+			paths = append(paths, segment.Path)
 		}
 	}
-	if req.NativeSessionID == "" {
+	if len(paths) == 0 && req.TranscriptHandle != "" {
+		paths = []string{req.TranscriptHandle}
+	}
+	receipt, err := scanRollouts(paths, req.MessageID)
+	if err != nil {
+		return agentruntime.MessageReceipt{}, err
+	}
+	if receipt.Appeared || req.NativeSessionID == "" {
 		return receipt, nil
 	}
 	client, err := startAppServer(ctx, req.Command, req.Env)
@@ -110,25 +124,37 @@ func (a *Adapter) ConfirmMessage(ctx context.Context, req agentruntime.ConfirmRe
 	return receipt, nil
 }
 
-// scanRollout finds the user message with client_id == messageID and any
-// agent message after it. Rollout lines nest the client id either on the
-// payload or on payload.item; both are read.
-func scanRollout(path, messageID string) (agentruntime.MessageReceipt, error) {
+// scanRollouts reads the segments in order and finds the user message with
+// client_id == messageID and any agent message after it, in the same segment
+// or a later one. Rollout lines nest the client id either on the payload or
+// on payload.item; both are read. RecordedThrough is the newest line time
+// across all segments.
+func scanRollouts(paths []string, messageID string) (agentruntime.MessageReceipt, error) {
+	var receipt agentruntime.MessageReceipt
+	for _, path := range paths {
+		if err := scanRollout(path, messageID, &receipt); err != nil {
+			return agentruntime.MessageReceipt{}, err
+		}
+	}
+	return receipt, nil
+}
+
+func scanRollout(path, messageID string, receipt *agentruntime.MessageReceipt) error {
 	file, err := os.Open(path)
 	if err != nil {
-		return agentruntime.MessageReceipt{}, fmt.Errorf("codex: open rollout: %w", err)
+		return fmt.Errorf("codex: open rollout: %w", err)
 	}
 	defer func() { _ = file.Close() }()
 	scanner := bufio.NewScanner(file)
 	scanner.Buffer(make([]byte, 0, 1024*1024), 16*1024*1024)
-	var receipt agentruntime.MessageReceipt
 	for scanner.Scan() {
 		line := scanner.Bytes()
 		if len(line) == 0 {
 			continue
 		}
 		var rec struct {
-			Payload struct {
+			Timestamp string `json:"timestamp"`
+			Payload   struct {
 				Type     string `json:"type"`
 				ClientID string `json:"client_id"`
 				Item     struct {
@@ -139,6 +165,9 @@ func scanRollout(path, messageID string) (agentruntime.MessageReceipt, error) {
 		}
 		if err := json.Unmarshal(line, &rec); err != nil {
 			continue
+		}
+		if at := parseRolloutTime(rec.Timestamp); at.After(receipt.RecordedThrough) {
+			receipt.RecordedThrough = at
 		}
 		kind := rec.Payload.Type
 		if rec.Payload.Item.Type != "" {
@@ -152,9 +181,9 @@ func scanRollout(path, messageID string) (agentruntime.MessageReceipt, error) {
 		}
 	}
 	if err := scanner.Err(); err != nil {
-		return agentruntime.MessageReceipt{}, fmt.Errorf("codex: scan rollout: %w", err)
+		return fmt.Errorf("codex: scan rollout %s: %w", path, err)
 	}
-	return receipt, nil
+	return nil
 }
 
 // isAgentMessageKind matches the agent reply item in both spellings the

@@ -5,60 +5,38 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/fs"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/hiveryn/agentruntime"
 )
 
-// LocateTranscript resolves the absolute path of a Codex session rollout.
-// Codex stores rollouts at <configRoot>/sessions/YYYY/MM/DD/rollout-<ts>-<id>.jsonl
-// (older layouts place them flat under <configRoot>/sessions/). The session id is
-// a suffix of the filename, not the whole stem, and the date bucket is variable
-// depth, so we walk the sessions tree and match by the rollout-…-<id>.jsonl suffix
-// rather than constructing a fixed path. The hook payload does not reliably carry
-// the transcript path (its transcript_path field is nullable), so this glob is the
-// primary discovery mechanism. req.Workdir is unused — the rollout location is not
-// keyed on cwd.
-func (a *Adapter) LocateTranscript(_ context.Context, req agentruntime.LocateRequest) (string, error) {
+// LocateTranscript resolves the absolute path of the rollout that currently
+// records a Codex thread: its newest verified segment (see rollout.go). The
+// date bucket under <configRoot>/sessions is variable depth and the thread id
+// is a suffix of the filename, so the sessions tree is walked and every
+// candidate's identity is read from its session_meta rather than trusting the
+// name. The hook payload does not reliably carry the transcript path (its
+// transcript_path field is nullable), so this is the primary discovery
+// mechanism. A never-resumed thread has exactly one segment; after a resume
+// the newest segment is where new entries land and where token_count totals
+// (cumulative across segments) are current, so ParseUsage reads it unchanged,
+// though it counts only that segment's agent messages. Callers that need the
+// whole record (receipts) use LocateRolloutSegments. req.Workdir is unused —
+// the rollout location is not keyed on cwd.
+func (a *Adapter) LocateTranscript(ctx context.Context, req agentruntime.LocateRequest) (string, error) {
 	if req.NativeSessionID == "" {
 		return "", fmt.Errorf("codex: locate transcript: empty native session id")
 	}
-	home, err := codexHome(req.ConfigRoot)
+	segments, err := a.LocateRolloutSegments(ctx, req)
 	if err != nil {
-		return "", fmt.Errorf("codex: locate transcript: resolve codex home: %w", err)
+		return "", fmt.Errorf("codex: locate transcript: %w", err)
 	}
-	sessions := filepath.Join(home, "sessions")
-	suffix := "-" + req.NativeSessionID + ".jsonl"
-
-	var matches []string
-	walkErr := filepath.WalkDir(sessions, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if d.IsDir() {
-			return nil
-		}
-		name := d.Name()
-		if strings.HasPrefix(name, "rollout-") && strings.HasSuffix(name, suffix) {
-			matches = append(matches, path)
-		}
-		return nil
-	})
-	if walkErr != nil {
-		return "", fmt.Errorf("codex: locate transcript: walk %q: %w", sessions, walkErr)
+	if len(segments) == 0 {
+		home, _ := codexHome(req.ConfigRoot)
+		return "", fmt.Errorf("codex: transcript not found for session %q under %q", req.NativeSessionID, filepath.Join(home, "sessions"))
 	}
-
-	switch len(matches) {
-	case 0:
-		return "", fmt.Errorf("codex: transcript not found for session %q under %q", req.NativeSessionID, sessions)
-	case 1:
-		return matches[0], nil
-	default:
-		return "", fmt.Errorf("codex: ambiguous transcript for session %q: %d matches under %q", req.NativeSessionID, len(matches), sessions)
-	}
+	return segments[len(segments)-1].Path, nil
 }
 
 // rolloutLine is the minimal subset of a Codex JSONL rollout line that usage
