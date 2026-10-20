@@ -89,6 +89,8 @@ func TestHookCommandPostsCorrectEnvelope(t *testing.T) {
 	if err := cmd.Run(); err != nil {
 		t.Fatalf("hook command failed: %v", err)
 	}
+	// Wait for the fixture handler before reading its captured payload.
+	server.Close()
 
 	if receivedPath != "/claude" {
 		t.Errorf("path: got %q want /claude", receivedPath)
@@ -157,6 +159,8 @@ func TestHookCommandEnvelopeCorrelatesWithNormalizeEvent(t *testing.T) {
 	if err := cmd.Run(); err != nil {
 		t.Fatalf("hook command failed: %v", err)
 	}
+	// Wait for the fixture handler before reading its captured payload.
+	server.Close()
 
 	event, err := adapter.NormalizeEvent(t.Context(), receivedPayload)
 	if err != nil {
@@ -210,6 +214,8 @@ func TestHookCommandPermissionRequestAwaitingInput(t *testing.T) {
 	if err := cmd.Run(); err != nil {
 		t.Fatalf("hook command failed: %v", err)
 	}
+	// Wait for the fixture handler before reading its captured payload.
+	server.Close()
 
 	event, err := adapter.NormalizeEvent(t.Context(), receivedPayload)
 	if err != nil {
@@ -251,6 +257,8 @@ func TestHookCommandStopFailureMapsToError(t *testing.T) {
 	if err := cmd.Run(); err != nil {
 		t.Fatalf("hook command failed: %v", err)
 	}
+	// Wait for the fixture handler before reading its captured payload.
+	server.Close()
 
 	event, err := adapter.NormalizeEvent(t.Context(), receivedPayload)
 	if err != nil {
@@ -289,6 +297,8 @@ func TestHookCommandFallsBackToNativeIDWhenCallerIDMissing(t *testing.T) {
 	if err := cmd.Run(); err != nil {
 		t.Fatalf("hook command failed: %v", err)
 	}
+	// Wait for the fixture handler before reading its captured payload.
+	server.Close()
 
 	event, err := adapter.NormalizeEvent(t.Context(), receivedPayload)
 	if err != nil {
