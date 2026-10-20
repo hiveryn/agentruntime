@@ -137,6 +137,9 @@ every caller using the marker is being uninstalled.
   `StartRequest.Instructions`), and optional `Permission`. Ignored when nil or
   empty; nil per-agent `Permission` values are omitted so OpenCode receives
   `undefined`, not JSON `null`.
+- **`MessageDelivery`** — optional per-process plumbing so the caller can later
+  deliver messages into the running session; see
+  [Message Delivery](#message-delivery).
 - **`Resume`** — when `true`, resume an existing session instead of starting
   fresh.
 - **`ResumeID`** — native session ID to resume when `Resume` is `true`. If empty,
@@ -193,9 +196,9 @@ through `StartRequest.Args`:
 
 | Adapter  | Managed Args                                                                     |
 |----------|----------------------------------------------------------------------------------|
-| Claude   | `--append-system-prompt`, `--system-prompt`, `--mcp-config`, `--session-id`, `--resume`, `--add-dir` |
+| Claude   | `--append-system-prompt`, `--system-prompt`, `--mcp-config`, `--session-id`, `--resume`, `--add-dir`, `--settings` |
 | Codex    | `--add-dir` (other top-level args pass through; `resume` is a subcommand)        |
-| OpenCode | `--prompt`, `--continue`, `-c`, `--session`, `-s`                                |
+| OpenCode | `--prompt`, `--continue`, `-c`, `--session`, `-s`, `--port`                      |
 
 ### Additional Workdirs
 
@@ -275,6 +278,42 @@ when it stops waiting (timeout or Esc). Claude sends no cancel on its idle
 timeout. OpenCode may send a stray cancel just after a successful result. A
 server should therefore treat "the client stopped waiting" as a normal
 outcome. Evidence: `research/2026-09-29-mcp-long-wait/`.
+
+### Message Delivery
+
+A caller can hand a plain-text message into an existing session through the
+provider's own route, never by typing into its terminal. agentruntime supplies
+the provider mechanics; the caller owns durability, routing, retry, the idle
+gate and what the messages mean. Nothing here is exactly-once: keep a stable
+message id, check the receipt before redelivering, and redeliver under the same
+id. Evidence and the behaviour matrix: `research/2026-10-20-message-delivery/`.
+
+**`StartRequest.MessageDelivery`** (non-nil) adds the per-process launch
+plumbing, on new and resumed launches alike:
+
+| Adapter  | Launch plumbing | Route | Caller must gate on idle |
+|----------|-----------------|-------|--------------------------|
+| Claude   | Per-launch `--settings` file adding SessionStart and Stop `asyncRewake` command hooks (timeout `HookWaitTimeout`, default 24 h). The node waiter long-polls `$AGENTRUNTIME_HOOK_ENDPOINT/claude/wait` with `{"hook": <hook JSON>, "env": {"AGENTRUNTIME_SESSION_ID": ...}}`; a 200 `{"id","text"}` makes it print the text to stderr and exit 2, which wakes the idle model with the text; 204/404/400 or no endpoint exit 0; transport errors are retried in-process, since nothing re-arms a session until its next hook event | Pull: `ingest.Mailbox` keeps one waiter per caller session (newest wins, the superseded one gets 204); `Deliver` hands the message to it | Yes — otherwise the message joins the running turn and displaces the task's reply. A waiter past its timeout, or a session that fired no hook since launch, has no waiter until its next Stop or resume |
+| Codex    | None | Push: `DeliverMessage` runs an embedded `codex app-server` (experimental API) and calls `thread/queue/add` with the caller's id as `clientUserMessageId` after `thread/queue/list`, so a retry never queues a second copy | No — the queue runs the item as its own turn when the thread is idle, also after resume. After an Esc-interrupted turn it waits for the user's next completed turn |
+| OpenCode | `--port ServerPort` and `OPENCODE_SERVER_PASSWORD=ServerPassword` (both required) | Push: `GET /session/:id/message/:ref` for the previous attempt's id, then `POST /session/:id/prompt_async` with a fresh ascending `messageID` (an earlier id that never landed would sort before newer messages and not run); basic auth user `opencode` | Yes — a busy or permission-waiting session merges it into the running loop |
+
+**`MessageDeliverer`** (implemented by all three adapters): `MessageCapability`
+(mechanism, pull/push, `GateOnIdle`, coverage statement), `DeliverMessage`
+(push adapters; Claude returns an error, hand over through the mailbox) and
+`ConfirmMessage`, the receipt check against the provider's own record using the
+`LocateTranscript` handle: Claude a `user` transcript entry containing the id
+(the caller embeds it in the text) and an `assistant` entry after it; Codex the
+rollout user message whose `client_id` is the id, an `agent_message` after it,
+and — when not yet recorded — whether the queue still holds it (`Queued`);
+OpenCode the message row in its database and an assistant message whose
+`parentID` is the message id. `Appeared` means the message is in the
+conversation record and `Acknowledged` that the agent replied after it; neither
+means the agent acted on it.
+
+Known windows: Claude does not replay a message it enqueued but had not run
+when its process was killed (redeliver when the record lacks it after the next
+idle); Codex starts the turn before deleting the queue row, so a crash between
+the two can run the item twice; an OpenCode 204 is acceptance, not processing.
 
 ### Resume Behavior
 

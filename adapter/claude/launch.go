@@ -42,6 +42,7 @@ var managedArgs = map[string]struct{}{
 	"--session-id":           {},
 	"--resume":               {},
 	"--add-dir":              {},
+	"--settings":             {},
 }
 
 func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest) (agentruntime.LaunchSpec, error) {
@@ -120,6 +121,18 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 			return agentruntime.LaunchSpec{}, err
 		}
 		args = append(args, "--mcp-config", path)
+		cleanupPaths = append(cleanupPaths, path)
+	}
+	if req.MessageDelivery != nil {
+		settings, err := messageHookSettings(req.MessageDelivery.MessageHookTimeout())
+		if err != nil {
+			return agentruntime.LaunchSpec{}, err
+		}
+		path, err := agentruntime.TargetFileSystem(req.FileSystem).WriteTemp("agentruntime-claude-messages-*.json", settings)
+		if err != nil {
+			return agentruntime.LaunchSpec{}, err
+		}
+		args = append(args, "--settings", path)
 		cleanupPaths = append(cleanupPaths, path)
 	}
 	// nativeSessionID is the session handle returned to consumers so they can

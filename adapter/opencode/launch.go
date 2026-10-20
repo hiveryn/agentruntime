@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/hiveryn/agentruntime"
@@ -42,7 +43,12 @@ var managedArgs = map[string]struct{}{
 	"-c":         {},
 	"--session":  {},
 	"-s":         {},
+	"--port":     {},
 }
+
+// serverPasswordEnv protects the TUI's embedded session server with basic
+// auth; it is set from MessageDelivery.ServerPassword.
+const serverPasswordEnv = "OPENCODE_SERVER_PASSWORD"
 
 func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest) (agentruntime.LaunchSpec, error) {
 	if req.ID == "" {
@@ -176,6 +182,15 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 	if plan {
 		args = append(args, "--agent", "plan")
 	}
+	if req.MessageDelivery != nil {
+		if req.MessageDelivery.ServerPort <= 0 || req.MessageDelivery.ServerPassword == "" {
+			return agentruntime.LaunchSpec{}, fmt.Errorf("opencode: MessageDelivery requires ServerPort and ServerPassword")
+		}
+		if v, ok := req.Env[serverPasswordEnv]; ok && v != req.MessageDelivery.ServerPassword {
+			return agentruntime.LaunchSpec{}, fmt.Errorf("env %s conflicts with MessageDelivery.ServerPassword; remove it from env", serverPasswordEnv)
+		}
+		args = append(args, "--port", strconv.Itoa(req.MessageDelivery.ServerPort))
+	}
 	args = append(args, req.Args...)
 
 	sessionEnv, err := agentruntime.SessionEnv(req)
@@ -187,6 +202,9 @@ func (a *Adapter) PrepareLaunch(_ context.Context, req agentruntime.StartRequest
 	}
 
 	env := buildEnv(req.Env, sessionEnv, string(configJSON))
+	if req.MessageDelivery != nil {
+		env[serverPasswordEnv] = req.MessageDelivery.ServerPassword
+	}
 
 	return agentruntime.LaunchSpec{
 		Command:            command,

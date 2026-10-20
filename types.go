@@ -98,6 +98,9 @@ type StartRequest struct {
 	// CLAUDE.md/project instructions, transcript persistence and resume are
 	// unaffected. Other adapters ignore it.
 	ClaudeAutoMemory bool
+	// MessageDelivery adds the per-process plumbing for delivering messages
+	// into this session (see messages.go). Nil leaves the launch unchanged.
+	MessageDelivery *MessageDelivery
 }
 
 // OpenCodeAgentConfig defines an OpenCode agent profile entry for the config agent section.
