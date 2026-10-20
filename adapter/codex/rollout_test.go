@@ -195,8 +195,10 @@ func TestConfirmMessageReadsReceiptsAcrossSegments(t *testing.T) {
 		itemLine("2026-10-20T05:54:16Z", "AgentMessage", ""))
 	writeSegment(t, home, "2026/10/20", "2026-10-20T06-54-17", threadA, segA1, "",
 		itemLine("2026-10-20T08:50:46Z", "UserMessage", msg))
+	// The reply is dated past every segment's session_meta time whatever the
+	// test machine's zone makes of the filename stamps.
 	writeSegment(t, home, "2026/10/20", "2026-10-20T09-53-22", threadA, segA2, "",
-		itemLine("2026-10-20T09:07:26Z", "AgentMessage", ""))
+		itemLine("2026-10-20T23:07:26Z", "AgentMessage", ""))
 
 	stale, err := adapter.LocateTranscript(context.Background(), agentruntime.LocateRequest{NativeSessionID: threadA, ConfigRoot: home})
 	if err != nil || !strings.Contains(stale, segA2) {
@@ -207,7 +209,7 @@ func TestConfirmMessageReadsReceiptsAcrossSegments(t *testing.T) {
 	if err != nil || !receipt.Appeared || !receipt.Acknowledged || receipt.Queued {
 		t.Fatalf("across segments = %+v %v", receipt, err)
 	}
-	if want := time.Date(2026, 10, 20, 9, 7, 26, 0, time.UTC); !receipt.RecordedThrough.Equal(want) {
+	if want := time.Date(2026, 10, 20, 23, 7, 26, 0, time.UTC); !receipt.RecordedThrough.Equal(want) {
 		t.Fatalf("recorded through %v, want %v", receipt.RecordedThrough, want)
 	}
 	// Absent from every segment and not queued: an authoritative absence
