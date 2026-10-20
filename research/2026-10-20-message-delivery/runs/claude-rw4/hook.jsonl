@@ -1,0 +1,7 @@
+{"at":"2026-10-20T03:01:59.743Z","pid":27386,"event":"start","hookEvent":"SessionStart","session":"8a7b5080-77d5-4a8e-b5ba-face11eacada","source":"startup"}
+{"at":"2026-10-20T03:02:08.446Z","pid":27424,"event":"start","hookEvent":"UserPromptSubmit","session":"8a7b5080-77d5-4a8e-b5ba-face11eacada"}
+{"at":"2026-10-20T03:02:18.397Z","pid":27386,"event":"deliver","id":"C-MSG-007"}
+{"at":"2026-10-20T03:02:27.580Z","pid":27979,"event":"start","hookEvent":"SessionStart","session":"8a7b5080-77d5-4a8e-b5ba-face11eacada","source":"resume"}
+{"at":"2026-10-20T03:02:53.029Z","pid":27979,"event":"deliver","id":"C-MSG-007"}
+{"at":"2026-10-20T03:02:53.084Z","pid":28089,"event":"start","hookEvent":"UserPromptSubmit","session":"8a7b5080-77d5-4a8e-b5ba-face11eacada"}
+{"at":"2026-10-20T03:02:55.980Z","pid":28106,"event":"start","hookEvent":"Stop","session":"8a7b5080-77d5-4a8e-b5ba-face11eacada"}

@@ -1,0 +1,12 @@
+msg_1574608dd001d659rZWkIwEwTh user 1792465570013 Reply with exactly the word READY and nothing else.
+msg_1574608ed0017h36BZt2ZHJxPe assistant 1792465570029 READY
+msg_157466101001AGtW0XfBMFsv0C user 1792465608321 HIVERYN-MSG-O001: Synthetic notification. Reply with exactly ACK-O001. HIVERYN-MSG-O001: Synthetic n
+msg_15746611b001S2EDMealunkFtz assistant 1792465592603 ACK-O001
+msg_15746e14c001wtHc9njHrSheUR user 1792465625420 This is a timing test. Use the bash tool to run exactly: for i in 1 2 3 4 5 6; do echo tick $i; slee
+msg_15746e156001Ok0J8NQRe5V3FX assistant 1792465625430 -
+msg_15747089d001LgWoCH2D3RYR1U user 1792465635506 HIVERYN-MSG-O002: Synthetic notification sent while busy. Reply with exactly ACK-O002.
+msg_157475eda001Jeb7JGsoH8z7iG assistant 1792465657562 ACK-O002
+msg_15747c4090012gFMgGFmQCsngx user 1792465683482 HIVERYN-MSG-O003: Synthetic notification with a user draft open. Reply with exactly ACK-O003.
+msg_15747c428001VE9I2tFtkgpNWV assistant 1792465683496 ACK-O003
+msg_157495651001AyU9BBjv7JpWnT user 1792465831224 HIVERYN-MSG-O005: Synthetic notification after restart. Reply with exactly ACK-O005. HIVERYN-MSG-O00
+msg_1574a05400011v9FcEdiIZ0sd9 assistant 1792465831232 ACK-O005

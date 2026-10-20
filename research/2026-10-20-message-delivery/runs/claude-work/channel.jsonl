@@ -1,0 +1,6 @@
+{"at":"2026-10-20T02:54:56.155Z","pid":23450,"event":"listening","port":8791}
+{"at":"2026-10-20T02:54:56.158Z","pid":23450,"event":"recv","msg":{"jsonrpc":"2.0","id":"server-discover-probe-1","method":"server/discover","params":{"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28","io.modelcontextprotocol/clientInfo":{"name":"claude-code","title":"Claude Code","version":"2.1.304","description":"Anthropic's agentic coding tool","websiteUrl":"https://claude.com/claude-code"},"io.modelcontextprotocol/clientCapabilities":{"roots":{"listChanged":true},"elicitation":{"form":{},"url":{}}}}}}}
+{"at":"2026-10-20T02:54:56.187Z","pid":23450,"event":"recv","msg":{"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{"roots":{"listChanged":true},"elicitation":{"form":{},"url":{}}},"clientInfo":{"name":"claude-code","title":"Claude Code","version":"2.1.304","description":"Anthropic's agentic coding tool","websiteUrl":"https://claude.com/claude-code"}},"jsonrpc":"2.0","id":0}}
+{"at":"2026-10-20T02:54:56.198Z","pid":23450,"event":"recv","msg":{"jsonrpc":"2.0","method":"notifications/initialized"}}
+{"at":"2026-10-20T02:54:56.199Z","pid":23450,"event":"recv","msg":{"method":"tools/list","jsonrpc":"2.0","id":1}}
+{"at":"2026-10-20T02:55:05.839Z","pid":23450,"event":"sent","id":"C-MSG-001","initialized":true,"writeReturned":true}

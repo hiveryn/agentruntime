@@ -1,0 +1,17 @@
+{"at":"2026-10-20T02:59:27.428Z","event":"listening"}
+{"at":"2026-10-20T02:59:29.360Z","event":"waiting","session":"7428fc7b-0216-47ee-bf3d-fe8570eb48d5","waiter":1,"hookEvent":"SessionStart"}
+{"at":"2026-10-20T02:59:42.733Z","event":"busy","session":"7428fc7b-0216-47ee-bf3d-fe8570eb48d5"}
+{"at":"2026-10-20T02:59:52.677Z","event":"queued","session":"7428fc7b-0216-47ee-bf3d-fe8570eb48d5","id":"C-MSG-004"}
+{"at":"2026-10-20T02:59:52.677Z","event":"held","session":"7428fc7b-0216-47ee-bf3d-fe8570eb48d5","id":"C-MSG-004"}
+{"at":"2026-10-20T03:00:18.450Z","event":"superseded","session":"7428fc7b-0216-47ee-bf3d-fe8570eb48d5","waiter":1}
+{"at":"2026-10-20T03:00:18.451Z","event":"waiting","session":"7428fc7b-0216-47ee-bf3d-fe8570eb48d5","waiter":2,"hookEvent":"Stop"}
+{"at":"2026-10-20T03:00:18.451Z","event":"handed","session":"7428fc7b-0216-47ee-bf3d-fe8570eb48d5","id":"C-MSG-004","waiter":2,"hookEvent":"Stop"}
+{"at":"2026-10-20T03:00:18.515Z","event":"busy","session":"7428fc7b-0216-47ee-bf3d-fe8570eb48d5"}
+{"at":"2026-10-20T03:00:20.212Z","event":"waiting","session":"7428fc7b-0216-47ee-bf3d-fe8570eb48d5","waiter":3,"hookEvent":"Stop"}
+{"at":"2026-10-20T03:00:39.495Z","event":"waiter_gone","session":"7428fc7b-0216-47ee-bf3d-fe8570eb48d5","waiter":3}
+{"at":"2026-10-20T03:01:34.911Z","event":"queued","session":"7428fc7b-0216-47ee-bf3d-fe8570eb48d5","id":"C-MSG-006"}
+{"at":"2026-10-20T03:01:40.040Z","event":"waiting","session":"7428fc7b-0216-47ee-bf3d-fe8570eb48d5","waiter":4,"hookEvent":"SessionStart"}
+{"at":"2026-10-20T03:01:40.040Z","event":"handed","session":"7428fc7b-0216-47ee-bf3d-fe8570eb48d5","id":"C-MSG-006","waiter":4,"hookEvent":"SessionStart"}
+{"at":"2026-10-20T03:01:40.290Z","event":"busy","session":"7428fc7b-0216-47ee-bf3d-fe8570eb48d5"}
+{"at":"2026-10-20T03:01:41.880Z","event":"waiting","session":"7428fc7b-0216-47ee-bf3d-fe8570eb48d5","waiter":5,"hookEvent":"Stop"}
+{"at":"2026-10-20T03:01:59.601Z","event":"waiter_gone","session":"7428fc7b-0216-47ee-bf3d-fe8570eb48d5","waiter":5}

@@ -1,0 +1,8 @@
+{"at":"2026-10-20T03:33:14.564Z","pid":40024,"event":"start","hookEvent":"SessionStart","session":"3d2b1f23-e0d2-48bc-baa8-ccc667f0046a","source":"startup"}
+{"at":"2026-10-20T03:34:27.178Z","pid":40024,"event":"retry","error":"Error: socket hang up"}
+{"at":"2026-10-20T03:34:29.183Z","pid":40024,"event":"retry","error":"Error: connect ECONNREFUSED 127.0.0.1:8802"}
+{"at":"2026-10-20T03:34:31.187Z","pid":40024,"event":"retry","error":"Error: connect ECONNREFUSED 127.0.0.1:8802"}
+{"at":"2026-10-20T03:44:33.493Z","pid":40024,"event":"deliver","id":"C-MSG-009"}
+{"at":"2026-10-20T03:44:33.573Z","pid":41916,"event":"start","hookEvent":"UserPromptSubmit","session":"3d2b1f23-e0d2-48bc-baa8-ccc667f0046a"}
+{"at":"2026-10-20T03:44:35.903Z","pid":41940,"event":"start","hookEvent":"Stop","session":"3d2b1f23-e0d2-48bc-baa8-ccc667f0046a"}
+{"at":"2026-10-20T03:45:03.286Z","pid":41940,"event":"retry","error":"Error: socket hang up"}

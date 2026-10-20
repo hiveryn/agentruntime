@@ -1,0 +1,36 @@
+{"ts": "2026-10-20T02:48:28.639Z", "event": "task_started", "turn_trigger": "user", "turn_id": "01a15735-d6ba-77e2-aa40-3875ce0ce7fa"}
+{"ts": "2026-10-20T02:48:34.811Z", "event": "UserMessage", "turn_id": "01a15735-d6ba-77e2-aa40-3875ce0ce7fa", "client_id": "27660564-9b5d-46f5-83b8-685d2d5db0d0", "text": "Reply with exactly the word READY and nothing else."}
+{"ts": "2026-10-20T02:48:38.219Z", "event": "AgentMessage", "turn_id": "01a15735-d6ba-77e2-aa40-3875ce0ce7fa", "client_id": null, "text": "READY"}
+{"ts": "2026-10-20T02:49:04.623Z", "event": "task_started", "turn_trigger": "queue", "turn_id": "01a15736-6365-7a22-9acf-55db9ed8342c"}
+{"ts": "2026-10-20T02:49:04.658Z", "event": "UserMessage", "turn_id": "01a15736-6365-7a22-9acf-55db9ed8342c", "client_id": "01a15736-5a26-7ad0-a28c-2073837e70f3", "text": "HIVERYN-MSG-001: Synthetic notification. Reply with exactly ACK-001."}
+{"ts": "2026-10-20T02:49:06.441Z", "event": "AgentMessage", "turn_id": "01a15736-6365-7a22-9acf-55db9ed8342c", "client_id": null, "text": "ACK-001"}
+{"ts": "2026-10-20T02:49:54.622Z", "event": "task_started", "turn_trigger": "queue", "turn_id": "01a15737-26b5-73f2-bef6-d8876fb91be5"}
+{"ts": "2026-10-20T02:49:54.640Z", "event": "UserMessage", "turn_id": "01a15737-26b5-73f2-bef6-d8876fb91be5", "client_id": "01a15737-12e8-7661-a948-f677ae8837f6", "text": "HIVERYN-MSG-002: Synthetic notification while busy. Reply with exactly ACK-002."}
+{"ts": "2026-10-20T02:49:57.107Z", "event": "AgentMessage", "turn_id": "01a15737-26b5-73f2-bef6-d8876fb91be5", "client_id": null, "text": "ACK-002"}
+{"ts": "2026-10-20T02:50:05.386Z", "event": "task_started", "turn_trigger": "user", "turn_id": "01a15737-50c6-7770-91ba-21b57d461076"}
+{"ts": "2026-10-20T02:50:05.394Z", "event": "UserMessage", "turn_id": "01a15737-50c6-7770-91ba-21b57d461076", "client_id": "802304d0-443b-45e1-aece-694bf0757dea", "text": "Run the shell command 'sleep 45' and when it finishes reply with exactly SLEPT."}
+{"ts": "2026-10-20T02:53:41.232Z", "event": "AgentMessage", "turn_id": "01a15737-50c6-7770-91ba-21b57d461076", "client_id": null, "text": "Starting the 45-second wait now."}
+{"ts": "2026-10-20T02:54:28.507Z", "event": "AgentMessage", "turn_id": "01a15737-50c6-7770-91ba-21b57d461076", "client_id": null, "text": "SLEPT"}
+{"ts": "2026-10-20T02:54:28.562Z", "event": "task_started", "turn_trigger": "queue", "turn_id": "01a1573b-54c7-7bc0-8dfa-50930b037cd3"}
+{"ts": "2026-10-20T02:54:28.570Z", "event": "UserMessage", "turn_id": "01a1573b-54c7-7bc0-8dfa-50930b037cd3", "client_id": "01a15737-7eb3-73e3-89f8-63e0c426f5bf", "text": "HIVERYN-MSG-003: Synthetic notification while busy. Reply with exactly ACK-003."}
+{"ts": "2026-10-20T02:54:30.091Z", "event": "AgentMessage", "turn_id": "01a1573b-54c7-7bc0-8dfa-50930b037cd3", "client_id": null, "text": "ACK-003"}
+{"ts": "2026-10-20T03:11:04.236Z", "event": "task_started", "turn_trigger": "user", "turn_id": "01a1574a-8617-7793-9bcf-8447f1083ba7"}
+{"ts": "2026-10-20T03:11:04.266Z", "event": "UserMessage", "turn_id": "01a1574a-8617-7793-9bcf-8447f1083ba7", "client_id": "82fe4860-4c31-4ebd-bd10-56bd378c7218", "text": "Run the shell command 'sleep 30' and then reply DONE."}
+{"ts": "2026-10-20T03:11:05.864Z", "event": "AgentMessage", "turn_id": "01a1574a-8617-7793-9bcf-8447f1083ba7", "client_id": null, "text": "Starting the 30-second wait."}
+{"ts": "2026-10-20T03:11:49.539Z", "event": "task_started", "turn_trigger": "user", "turn_id": "01a1574b-3718-73b3-a3ca-afc711c8ba41"}
+{"ts": "2026-10-20T03:11:49.554Z", "event": "UserMessage", "turn_id": "01a1574b-3718-73b3-a3ca-afc711c8ba41", "client_id": "1871955e-7704-4bc1-9e28-81c03e427142", "text": "Reply with exactly USER-BACK."}
+{"ts": "2026-10-20T03:11:52.525Z", "event": "AgentMessage", "turn_id": "01a1574b-3718-73b3-a3ca-afc711c8ba41", "client_id": null, "text": "USER-BACK"}
+{"ts": "2026-10-20T03:11:52.539Z", "event": "task_started", "turn_trigger": "queue", "turn_id": "01a1574b-42d8-7762-a9b2-dc406692bc94"}
+{"ts": "2026-10-20T03:11:52.549Z", "event": "UserMessage", "turn_id": "01a1574b-42d8-7762-a9b2-dc406692bc94", "client_id": "01a1574a-ae32-7691-9e2e-6620023b1758", "text": "HIVERYN-MSG-004: Synthetic notification after an interrupted turn. Reply with exactly ACK-004."}
+{"ts": "2026-10-20T03:11:54.476Z", "event": "AgentMessage", "turn_id": "01a1574b-42d8-7762-a9b2-dc406692bc94", "client_id": null, "text": "ACK-004"}
+{"ts": "2026-10-20T03:12:05.595Z", "event": "task_started", "turn_trigger": "queue", "turn_id": "01a1574b-75d7-7b81-b2e1-d10918f3451a"}
+{"ts": "2026-10-20T03:12:09.530Z", "event": "UserMessage", "turn_id": "01a1574b-75d7-7b81-b2e1-d10918f3451a", "client_id": "01a1574b-6d34-7162-acf7-482c483626d6", "text": "HIVERYN-MSG-005: Synthetic notification queued while Codex was not running. Reply with exactly ACK-005."}
+{"ts": "2026-10-20T03:16:13.184Z", "event": "task_started", "turn_trigger": "queue", "turn_id": "01a1574f-3cfe-79c0-a075-6352b1dce851"}
+{"ts": "2026-10-20T03:16:16.772Z", "event": "UserMessage", "turn_id": "01a1574f-3cfe-79c0-a075-6352b1dce851", "client_id": "hiveryn-msg-006", "text": "HIVERYN-MSG-006: Synthetic notification. Reply with exactly ACK-006."}
+{"ts": "2026-10-20T03:16:20.133Z", "event": "AgentMessage", "turn_id": "01a1574f-3cfe-79c0-a075-6352b1dce851", "client_id": null, "text": "ACK-006"}
+{"ts": "2026-10-20T03:16:41.831Z", "event": "task_started", "turn_trigger": "queue", "turn_id": "01a1574f-acdf-7313-8c1f-2b0e6bbb648f"}
+{"ts": "2026-10-20T03:16:41.869Z", "event": "UserMessage", "turn_id": "01a1574f-acdf-7313-8c1f-2b0e6bbb648f", "client_id": "01a1574f-9338-75a1-9727-30bd87995404", "text": "probe"}
+{"ts": "2026-10-20T03:16:46.521Z", "event": "AgentMessage", "turn_id": "01a1574f-acdf-7313-8c1f-2b0e6bbb648f", "client_id": null, "text": "probe"}
+{"ts": "2026-10-20T03:19:21.835Z", "event": "task_started", "turn_trigger": "queue", "turn_id": "01a15752-1ddf-7672-b46c-3a699fa9e3b0"}
+{"ts": "2026-10-20T03:19:21.855Z", "event": "UserMessage", "turn_id": "01a15752-1ddf-7672-b46c-3a699fa9e3b0", "client_id": "hiveryn-msg-007", "text": "HIVERYN-MSG-007: Synthetic notification, embedded writer while the daemon runs. Reply with exactly ACK-007."}
+{"ts": "2026-10-20T03:19:23.312Z", "event": "AgentMessage", "turn_id": "01a15752-1ddf-7672-b46c-3a699fa9e3b0", "client_id": null, "text": "ACK-007"}

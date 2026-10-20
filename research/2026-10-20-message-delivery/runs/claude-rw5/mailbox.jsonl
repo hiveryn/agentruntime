@@ -1,0 +1,4 @@
+{"at":"2026-10-20T03:20:31.728Z","event":"listening"}
+{"at":"2026-10-20T03:20:32.135Z","event":"waiting","session":"9bde37db-6d7c-45c7-a7c4-fc8e62d89ff4","waiter":1,"hookEvent":"SessionStart"}
+{"at":"2026-10-20T03:20:52.101Z","event":"waiter_gone","session":"9bde37db-6d7c-45c7-a7c4-fc8e62d89ff4","waiter":1}
+{"at":"2026-10-20T03:21:20.841Z","event":"queued","session":"9bde37db-6d7c-45c7-a7c4-fc8e62d89ff4","id":"C-MSG-008"}

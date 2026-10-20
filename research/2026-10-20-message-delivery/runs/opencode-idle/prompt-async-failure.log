@@ -1,0 +1,1 @@
+timestamp=2026-10-20T03:09:49.055Z level=ERROR run=2d9b6684 message="prompt_async failed" sessionID=ses_ea8b9f731ffeG8arC7DNecF1za cause="Cause([Die(ProviderModelNotFoundError: Model not found: deepseek/deepseek-v4-flash. Did you mean: deepseek-flash, deepseek-v4-pro?)])"

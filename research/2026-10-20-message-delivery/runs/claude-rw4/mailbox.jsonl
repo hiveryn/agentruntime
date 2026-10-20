@@ -1,0 +1,11 @@
+{"at":"2026-10-20T03:01:59.341Z","event":"listening"}
+{"at":"2026-10-20T03:01:59.760Z","event":"waiting","session":"8a7b5080-77d5-4a8e-b5ba-face11eacada","waiter":1,"hookEvent":"SessionStart"}
+{"at":"2026-10-20T03:02:08.460Z","event":"busy","session":"8a7b5080-77d5-4a8e-b5ba-face11eacada"}
+{"at":"2026-10-20T03:02:18.393Z","event":"queued","session":"8a7b5080-77d5-4a8e-b5ba-face11eacada","id":"C-MSG-007"}
+{"at":"2026-10-20T03:02:18.394Z","event":"handed","session":"8a7b5080-77d5-4a8e-b5ba-face11eacada","id":"C-MSG-007","waiter":1,"hookEvent":"SessionStart"}
+{"at":"2026-10-20T03:02:27.594Z","event":"waiting","session":"8a7b5080-77d5-4a8e-b5ba-face11eacada","waiter":2,"hookEvent":"SessionStart"}
+{"at":"2026-10-20T03:02:53.026Z","event":"queued","session":"8a7b5080-77d5-4a8e-b5ba-face11eacada","id":"C-MSG-007"}
+{"at":"2026-10-20T03:02:53.026Z","event":"handed","session":"8a7b5080-77d5-4a8e-b5ba-face11eacada","id":"C-MSG-007","waiter":2,"hookEvent":"SessionStart"}
+{"at":"2026-10-20T03:02:53.097Z","event":"busy","session":"8a7b5080-77d5-4a8e-b5ba-face11eacada"}
+{"at":"2026-10-20T03:02:55.994Z","event":"waiting","session":"8a7b5080-77d5-4a8e-b5ba-face11eacada","waiter":3,"hookEvent":"Stop"}
+{"at":"2026-10-20T03:02:59.672Z","event":"waiter_gone","session":"8a7b5080-77d5-4a8e-b5ba-face11eacada","waiter":3}

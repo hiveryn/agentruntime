@@ -1,0 +1,9 @@
+{"ts": "2026-10-20T03:02:08.399Z", "type": "user", "turnOrigin": "human", "content": "This is a timing test. In the foreground, run exactly this bash command once: for i in 1 2 3 4 5 6; do echo tick $i; sleep 5; done   Then reply LOOPED."}
+{"ts": "2026-10-20T03:02:10.776Z", "type": "assistant", "turnOrigin": null, "content": "tool_use:{\"command\": \"for i in 1 2 3 4 5 6; do echo tick $i; sleep 5; done\", \"description\": \"Run timed tick l"}
+{"ts": "2026-10-20T03:02:18.405Z", "type": "queue-operation", "op": "enqueue", "content": "<task-notification>\n<summary>Hiveryn notification</summary>\n</task-notification>\n<system-reminder>\nHiveryn notification (not an error): Hiveryn message C-MSG-007: Synthetic notification. Reply with exactly ACK-C007.\n\n</system-reminder>"}
+{"ts": "2026-10-20T03:02:21.447Z", "type": "user", "turnOrigin": null, "content": "tool_result:\"Exit code 137\\ntick 1\\ntick 2\""}
+{"ts": "2026-10-20T03:02:53.035Z", "type": "queue-operation", "op": "enqueue", "content": "<task-notification>\n<summary>Hiveryn notification</summary>\n</task-notification>\n<system-reminder>\nHiveryn notification (not an error): Hiveryn message C-MSG-007: Synthetic notification. Reply with exactly ACK-C007.\n\n</system-reminder>"}
+{"ts": "2026-10-20T03:02:53.038Z", "type": "queue-operation", "op": "dequeue", "content": ""}
+{"ts": "2026-10-20T03:02:27.513Z", "type": "assistant", "turnOrigin": null, "content": "No response requested."}
+{"ts": "2026-10-20T03:02:53.047Z", "type": "user", "turnOrigin": "task_notification", "content": "<task-notification>\n<summary>Hiveryn notification</summary>\n</task-notification>\n<system-reminder>\nHiveryn notification (not an error): Hiveryn message C-MSG-007: Synthetic notification. Reply with exactly ACK-C007.\n\n</system-reminder>"}
+{"ts": "2026-10-20T03:02:55.893Z", "type": "assistant", "turnOrigin": null, "content": "ACK-C007"}

@@ -1,0 +1,6 @@
+{"at":"2026-10-20T03:00:39.617Z","pid":26503,"event":"start","hookEvent":"SessionStart","session":"de4190b9-de20-47a0-9625-b9f60da34750","source":"startup"}
+{"at":"2026-10-20T03:00:48.317Z","pid":26539,"event":"start","hookEvent":"UserPromptSubmit","session":"de4190b9-de20-47a0-9625-b9f60da34750"}
+{"at":"2026-10-20T03:01:03.296Z","pid":26503,"event":"deliver","id":"C-MSG-005"}
+{"at":"2026-10-20T03:01:22.011Z","pid":27095,"event":"start","hookEvent":"UserPromptSubmit","session":"de4190b9-de20-47a0-9625-b9f60da34750"}
+{"at":"2026-10-20T03:01:24.161Z","pid":27103,"event":"start","hookEvent":"Stop","session":"de4190b9-de20-47a0-9625-b9f60da34750"}
+{"at":"2026-10-20T03:01:34.802Z","pid":27103,"event":"error","error":"TypeError: fetch failed"}

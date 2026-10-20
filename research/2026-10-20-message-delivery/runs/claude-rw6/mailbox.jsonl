@@ -1,0 +1,8 @@
+{"at":"2026-10-20T03:33:14.201Z","event":"listening"}
+{"at":"2026-10-20T03:33:14.568Z","event":"waiting","session":"3d2b1f23-e0d2-48bc-baa8-ccc667f0046a","waiter":1,"hookEvent":"SessionStart"}
+{"at":"2026-10-20T03:34:32.269Z","event":"listening"}
+{"at":"2026-10-20T03:34:33.197Z","event":"waiting","session":"3d2b1f23-e0d2-48bc-baa8-ccc667f0046a","waiter":1,"hookEvent":"SessionStart"}
+{"at":"2026-10-20T03:44:33.488Z","event":"queued","session":"3d2b1f23-e0d2-48bc-baa8-ccc667f0046a","id":"C-MSG-009"}
+{"at":"2026-10-20T03:44:33.489Z","event":"handed","session":"3d2b1f23-e0d2-48bc-baa8-ccc667f0046a","id":"C-MSG-009","waiter":1,"hookEvent":"SessionStart"}
+{"at":"2026-10-20T03:44:33.576Z","event":"busy","session":"3d2b1f23-e0d2-48bc-baa8-ccc667f0046a"}
+{"at":"2026-10-20T03:44:35.906Z","event":"waiting","session":"3d2b1f23-e0d2-48bc-baa8-ccc667f0046a","waiter":2,"hookEvent":"Stop"}

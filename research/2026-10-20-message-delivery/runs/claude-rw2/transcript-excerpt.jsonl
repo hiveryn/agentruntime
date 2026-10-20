@@ -1,0 +1,12 @@
+{"ts": "2026-10-20T02:59:42.673Z", "type": "user", "turnOrigin": "human", "content": "This is a timing test. In the foreground, run exactly this bash command once: for i in 1 2 3 4 5 6; do echo tick $i; sleep 5; done   Then reply LOOPED."}
+{"ts": "2026-10-20T02:59:45.082Z", "type": "assistant", "turnOrigin": null, "content": "tool_use:{\"command\": \"for i in 1 2 3 4 5 6; do echo tick $i; sleep 5; done\", \"description\": \"Run timed tick l"}
+{"ts": "2026-10-20T03:00:17.159Z", "type": "user", "turnOrigin": null, "content": "tool_result:\"tick 1\\ntick 2\\ntick 3\\ntick 4\\ntick 5\\ntick 6\""}
+{"ts": "2026-10-20T03:00:18.368Z", "type": "assistant", "turnOrigin": null, "content": "LOOPED"}
+{"ts": "2026-10-20T03:00:18.461Z", "type": "queue-operation", "op": "enqueue", "content": "<task-notification>\n<summary>Hiveryn notification</summary>\n</task-notification>\n<system-reminder>\nHiveryn notification (not an error): Hiveryn message C-MSG-004: Synthetic notification sent while you are busy. Reply with exactly ACK-C004.\n"}
+{"ts": "2026-10-20T03:00:18.463Z", "type": "queue-operation", "op": "dequeue", "content": ""}
+{"ts": "2026-10-20T03:00:18.466Z", "type": "user", "turnOrigin": "task_notification", "content": "<task-notification>\n<summary>Hiveryn notification</summary>\n</task-notification>\n<system-reminder>\nHiveryn notification (not an error): Hiveryn message C-MSG-004: Synthetic notification sent while you are busy. Reply with exactly ACK-C004.\n"}
+{"ts": "2026-10-20T03:00:20.117Z", "type": "assistant", "turnOrigin": null, "content": "ACK-C004"}
+{"ts": "2026-10-20T03:01:40.187Z", "type": "queue-operation", "op": "enqueue", "content": "<task-notification>\n<summary>Hiveryn notification</summary>\n</task-notification>\n<system-reminder>\nHiveryn notification (not an error): Hiveryn message C-MSG-006: Synthetic notification queued while no Claude process was running. Reply with"}
+{"ts": "2026-10-20T03:01:40.220Z", "type": "queue-operation", "op": "dequeue", "content": ""}
+{"ts": "2026-10-20T03:01:40.231Z", "type": "user", "turnOrigin": "task_notification", "content": "<task-notification>\n<summary>Hiveryn notification</summary>\n</task-notification>\n<system-reminder>\nHiveryn notification (not an error): Hiveryn message C-MSG-006: Synthetic notification queued while no Claude process was running. Reply with"}
+{"ts": "2026-10-20T03:01:41.780Z", "type": "assistant", "turnOrigin": null, "content": "ACK-C006"}

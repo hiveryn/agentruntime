@@ -1,0 +1,14 @@
+ ▐▛███▛█   Claude Code v2.1.304
+▝▜██████▀  Sonnet 5.5 · Claude Team
+ ▝▝   ▝▝   ~/hiveryn/agentruntime/research/2026-10-20-message-delivery/runs/claude-idle/work
+
+▎ --dangerously-load-development-channels blocked by org policy (server:hiveryn)
+▎ Inbound messages will be silently dropped
+▎ Have an administrator set channelsEnabled: true in managed settings to enable
+▎ server:hiveryn · no MCP server configured with that name
+
+                                                                                           Channels are not enabled for your org · have an administrator set channelsEnabled: true in managed settings
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ Try "fix typecheck errors"
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ⏵⏵ auto mode on (shift+tab to cycle)

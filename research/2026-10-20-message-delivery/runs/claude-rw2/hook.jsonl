@@ -1,0 +1,11 @@
+{"at":"2026-10-20T02:59:29.342Z","pid":25745,"event":"start","hookEvent":"SessionStart","session":"7428fc7b-0216-47ee-bf3d-fe8570eb48d5","source":"startup"}
+{"at":"2026-10-20T02:59:42.720Z","pid":25832,"event":"start","hookEvent":"UserPromptSubmit","session":"7428fc7b-0216-47ee-bf3d-fe8570eb48d5"}
+{"at":"2026-10-20T03:00:18.436Z","pid":26356,"event":"start","hookEvent":"Stop","session":"7428fc7b-0216-47ee-bf3d-fe8570eb48d5"}
+{"at":"2026-10-20T03:00:18.454Z","pid":26356,"event":"deliver","id":"C-MSG-004"}
+{"at":"2026-10-20T03:00:18.457Z","pid":25745,"event":"exit0","status":204}
+{"at":"2026-10-20T03:00:18.503Z","pid":26358,"event":"start","hookEvent":"UserPromptSubmit","session":"7428fc7b-0216-47ee-bf3d-fe8570eb48d5"}
+{"at":"2026-10-20T03:00:20.197Z","pid":26373,"event":"start","hookEvent":"Stop","session":"7428fc7b-0216-47ee-bf3d-fe8570eb48d5"}
+{"at":"2026-10-20T03:01:40.026Z","pid":27242,"event":"start","hookEvent":"SessionStart","session":"7428fc7b-0216-47ee-bf3d-fe8570eb48d5","source":"resume"}
+{"at":"2026-10-20T03:01:40.043Z","pid":27242,"event":"deliver","id":"C-MSG-006"}
+{"at":"2026-10-20T03:01:40.275Z","pid":27265,"event":"start","hookEvent":"UserPromptSubmit","session":"7428fc7b-0216-47ee-bf3d-fe8570eb48d5"}
+{"at":"2026-10-20T03:01:41.864Z","pid":27282,"event":"start","hookEvent":"Stop","session":"7428fc7b-0216-47ee-bf3d-fe8570eb48d5"}

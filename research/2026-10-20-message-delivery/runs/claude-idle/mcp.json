@@ -1,0 +1,1 @@
+{"mcpServers":{"hiveryn":{"type":"stdio","command":"/Users/kareemelbahrawy/.nvm/versions/node/v22.14.0/bin/node","args":["/Users/kareemelbahrawy/hiveryn/agentruntime/research/2026-10-20-message-delivery/channel-server.mjs"],"env":{"PROBE_LOG":"/Users/kareemelbahrawy/hiveryn/agentruntime/research/2026-10-20-message-delivery/runs/claude-idle/channel.jsonl","CHANNEL_PORT":"8791"}}}}
