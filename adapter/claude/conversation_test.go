@@ -73,3 +73,29 @@ func TestReconcileFollowsUserUUIDLineage(t *testing.T) {
 		t.Fatalf("missing receipt accepted: %#v %v", events, err)
 	}
 }
+
+func TestConversationStringEchoBlocksAndToolIdentity(t *testing.T) {
+	for _, content := range []string{`"hello"`, `[{"type":"text","text":"hello"}]`} {
+		t.Run(content, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			input := strings.Join([]string{
+				`{"type":"user","uuid":"other","message":{"content":"hidden previous input"}}`,
+				`{"type":"user","uuid":"user","message":{"content":` + content + `}}`,
+				`{"type":"assistant","uuid":"a","message":{"content":[{"type":"thinking","thinking":"PRIVATE"},{"type":"tool_use","id":"t","name":"Read"}]}}`,
+				`{"type":"user","uuid":"r","message":{"content":[{"type":"tool_result","tool_use_id":"t","is_error":true,"content":"denied"}]}}`,
+				`{"type":"result","uuid":"done","user_message_uuid":"user","is_error":false}`,
+			}, "\n")
+			var sent bytes.Buffer
+			c := claudeConversation{wire: chatwire.New(ctx, strings.NewReader(input), &sent), id: "session"}
+			var events []agentruntime.ConversationEvent
+			err := c.Turn(ctx, agentruntime.ConversationInput{ID: "user", Text: "hello"}, func(e agentruntime.ConversationEvent) error { events = append(events, e); return nil })
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(events) != 4 || events[0].ID != "user:0" || events[0].Role != "user" || events[0].Text != "hello" || events[2].ID != "t" || events[2].Tool != "Read" || events[2].Status != "failed" || !events[3].Complete {
+				t.Fatalf("events: %#v", events)
+			}
+		})
+	}
+}

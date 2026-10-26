@@ -62,6 +62,7 @@ func (c *claudeConversation) Turn(ctx context.Context, in agentruntime.Conversat
 	if err := c.wire.Send(m); err != nil {
 		return err
 	}
+	toolNames := map[string]string{}
 	for {
 		m, err := c.wire.Read(ctx)
 		if err != nil {
@@ -80,7 +81,12 @@ func (c *claudeConversation) Turn(ctx context.Context, in agentruntime.Conversat
 			event.ID = chatwire.String(m, "uuid")
 			event.Role = typ
 			event.Status = "completed"
-			for i, raw := range chatwire.List(chatwire.Map(m, "message"), "content") {
+			content := chatwire.Map(m, "message")["content"]
+			parts, _ := content.([]any)
+			if text, ok := content.(string); ok {
+				parts = []any{map[string]any{"type": "text", "text": text}}
+			}
+			for i, raw := range parts {
 				part, ok := raw.(map[string]any)
 				if !ok {
 					continue
@@ -89,15 +95,25 @@ func (c *claudeConversation) Turn(ctx context.Context, in agentruntime.Conversat
 				e.ID = fmt.Sprintf("%s:%d", event.ID, i)
 				switch chatwire.String(part, "type") {
 				case "text":
+					// Replay echoes belong to this input only. Tool-result user
+					// envelopes are handled separately below.
+					if typ == "user" && event.ID != in.ID {
+						continue
+					}
+					if event.ID == "" {
+						continue
+					}
 					e.Text = chatwire.String(part, "text")
 				case "tool_use":
 					e.Role = "tool"
 					e.Tool = chatwire.String(part, "name")
 					e.ID = chatwire.String(part, "id")
 					e.Status = "started"
+					toolNames[e.ID] = e.Tool
 				case "tool_result":
 					e.Role = "tool"
 					e.ID = chatwire.String(part, "tool_use_id")
+					e.Tool = toolNames[e.ID]
 					e.Status = "completed"
 					if part["is_error"] == true {
 						e.Status = "failed"
