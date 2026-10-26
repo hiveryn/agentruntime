@@ -378,23 +378,6 @@ elicitation notifications, Codex `PermissionRequest` (sent as the approval
 prompt is shown), and OpenCode `permission.asked` or its `question` tool. The
 next status from the same native session means it was answered.
 
-### Attention on screen
-
-Some prompts fire no hook: provider startup dialogs shown before
-`SessionStart`, and a resumed Codex or Claude conversation left waiting after
-an interrupted turn. Every adapter implements the optional
-`agentruntime.AttentionDetector`: `InspectScreen(lines)` takes the agent's
-rendered terminal screen (the caller owns the PTY and a terminal emulator) and
-returns an `*Attention` (`Reason`, `Message`) only for a provider dialog or
-banner in its live position; `AttentionCoverage()` states what can and cannot
-be detected. Idleness, silence or a missing hook are never reported as a wait.
-
-| Provider | Hook-reported prompts | Recognized on screen | Not detected |
-| --- | --- | --- | --- |
-| Claude Code | permission, elicitation | `folder_trust`, `bypass_permissions_warning`, `conversation_interrupted` (resumed after being killed during a tool call) | a resumed conversation after a hangup-only exit, a dropped interrupted reply or a stopped background command (no notice shown); other dialogs |
-| Codex | approval (`PermissionRequest`) | `folder_trust`, `conversation_interrupted` | other dialogs |
-| OpenCode | permission, `question` | nothing (no trust dialog; the update prompt does not block the agent) | a resumed session waiting after an interrupted turn (no notice shown); other dialogs |
-
 ### Ingestion Paths
 
 - **Convenience HTTP** — `receiver.Handler(agent)` accepts native hook JSON.
