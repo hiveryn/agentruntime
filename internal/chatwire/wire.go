@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strings"
 )
 
 type Object = map[string]any
@@ -88,5 +89,26 @@ func (w *Wire) Call(ctx context.Context, method string, params any, observe func
 				return nil, err
 			}
 		}
+	}
+}
+
+// TextContent extracts only visible text blocks from native tool content. It
+// deliberately does not stringify arbitrary payloads (reasoning, binary data,
+// metadata and instruction/config objects are not conversation output).
+func TextContent(value any) string {
+	switch v := value.(type) {
+	case string:
+		return v
+	case []any:
+		parts := []string{}
+		for _, raw := range v {
+			part, ok := raw.(map[string]any)
+			if ok && String(part, "type") == "text" {
+				parts = append(parts, String(part, "text"))
+			}
+		}
+		return strings.Join(parts, "\n")
+	default:
+		return ""
 	}
 }

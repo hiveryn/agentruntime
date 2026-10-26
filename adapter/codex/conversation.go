@@ -126,6 +126,15 @@ func (c *codexConversation) Turn(ctx context.Context, in agentruntime.Conversati
 			e.Role = "tool"
 			e.Tool = chatwire.String(item, "type")
 			e.Text = chatwire.String(item, "aggregatedOutput")
+			if e.Tool == "mcpToolCall" {
+				if name := chatwire.String(item, "tool"); name != "" {
+					e.Tool = chatwire.String(item, "server") + "/" + name
+				}
+				e.Text = chatwire.TextContent(chatwire.Map(item, "result")["content"])
+				if message := chatwire.String(chatwire.Map(item, "error"), "message"); message != "" {
+					e.Text = message
+				}
+			}
 			if status := chatwire.String(item, "status"); status != "" {
 				e.Status = status
 			}

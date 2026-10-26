@@ -102,7 +102,7 @@ func (c *claudeConversation) Turn(ctx context.Context, in agentruntime.Conversat
 					if part["is_error"] == true {
 						e.Status = "failed"
 					}
-					e.Text = chatwire.String(part, "content")
+					e.Text = chatwire.TextContent(part["content"])
 				default:
 					continue
 				}

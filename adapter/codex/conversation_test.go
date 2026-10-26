@@ -19,7 +19,7 @@ func TestConversationCompletesOnlyMatchingNativeTurn(t *testing.T) {
 		`{"method":"turn/completed","params":{"threadId":"thread","turn":{"id":"other","status":"completed"}}}`,
 		`{"method":"item/completed","params":{"threadId":"thread","turnId":"turn","item":{"id":"thought","type":"reasoning","text":"PRIVATE"}}}`,
 		`{"id":40,"method":"item/commandExecution/requestApproval","params":{"threadId":"thread","turnId":"turn"}}`,
-		`{"method":"item/completed","params":{"threadId":"thread","turnId":"turn","item":{"id":"tool","type":"mcpToolCall","status":"failed"}}}`,
+		`{"method":"item/completed","params":{"threadId":"thread","turnId":"turn","item":{"id":"tool","type":"mcpToolCall","tool":"echo","server":"fixture","status":"failed","error":{"message":"original tool failure"}}}}`,
 		`{"method":"turn/completed","params":{"threadId":"thread","turn":{"id":"turn","status":"completed"}}}`,
 	}, "\n")
 	c := codexConversation{wire: chatwire.New(ctx, strings.NewReader(input), &sent), id: "thread"}
@@ -27,7 +27,7 @@ func TestConversationCompletesOnlyMatchingNativeTurn(t *testing.T) {
 	if err := c.Turn(ctx, agentruntime.ConversationInput{ID: "request", Text: "hi"}, func(e agentruntime.ConversationEvent) error { events = append(events, e); return nil }); err != nil {
 		t.Fatal(err)
 	}
-	if len(events) != 4 || events[1].Status != "blocked" || events[2].Status != "failed" || !events[3].Complete || events[3].Status != "completed" {
+	if len(events) != 4 || events[1].Status != "blocked" || events[2].Status != "failed" || events[2].Tool != "fixture/echo" || events[2].Text != "original tool failure" || !events[3].Complete || events[3].Status != "completed" {
 		t.Fatalf("events %#v", events)
 	}
 	if strings.Contains(sent.String(), "decision") {
