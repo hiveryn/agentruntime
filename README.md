@@ -643,3 +643,27 @@ hooks and launch artifacts in another environment. Nil uses the local OS.
 create private files there. Cleanup paths belong to that filesystem. The caller
 owns transport, authentication, process persistence and cleanup; agentruntime
 does not start an SSH connection or install a remote service.
+
+### Structured conversations
+
+The optional `ConversationAdapter` seam prepares a `ConversationSpec` for a
+single-submitter, persistent structured session (Claude stream JSON, Codex
+app-server, OpenCode loopback server). `Launch` reuses provider configuration
+synthesis; the caller owns the child process and passes its pipes to `Connect`.
+The connect context must live for the process lifetime, not just startup.
+
+`Conversation.Turn` accepts a caller-owned input UUID, emits normalized visible
+items, and returns only after native completion or transport failure. A tool
+failure does not by itself fail the model turn. Permission requests emit
+`blocked` and are left unanswered. Hidden reasoning and raw instruction payloads
+are not emitted. `ConversationReconciler` checks explicit native turn IDs or
+user/parent UUID lineage after the previous owner stops. Missing/incomplete
+records never authorize a replay. The caller must persist dispatch reservations,
+serialize all submitters (including notifications), and retain ambiguous turns.
+
+Chat resume requires a native ID; interactive pickers and TUI-only settings are
+rejected. The caller must not install another submitting TUI beside the structured
+owner. These transports do not install global hooks or own product lifecycle,
+authentication, public HTTP APIs, queues or persistence. Native acceptance remains
+the embedding application's responsibility; adapter tests use deterministic
+fixtures only.
