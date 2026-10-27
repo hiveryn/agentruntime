@@ -64,6 +64,9 @@ func (f *fakeServer) handler(t *testing.T) http.Handler {
 		f.mu.Lock()
 		defer f.mu.Unlock()
 		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/session/ses_1/message":
+			_, _ = w.Write([]byte(`[{"info":{"role":"user","agent":"build"}},{"info":{"role":"assistant","agent":"x"}},` +
+				`{"info":{"role":"user","agent":"architect-key","model":{"providerID":"deepseek","modelID":"deepseek-v4-flash"}}},{"info":{"role":"assistant"}}]`))
 		case r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, "/session/ses_1/message/"):
 			id := strings.TrimPrefix(r.URL.Path, "/session/ses_1/message/")
 			if f.messages[id] {
@@ -108,6 +111,10 @@ func TestDeliverMessagePostsOnceAndNeverResendsAnExistingID(t *testing.T) {
 	}
 	if len(fake.posts) != 1 || fake.posts[0]["parts"].([]any)[0].(map[string]any)["text"] != "Hiveryn message m-1: hello" {
 		t.Fatalf("posts %+v", fake.posts)
+	}
+	// The session's own agent and model, not OpenCode's default agent.
+	if fake.posts[0]["agent"] != "architect-key" || fake.posts[0]["model"].(map[string]any)["modelID"] != "deepseek-v4-flash" {
+		t.Fatalf("agent/model not carried over: %+v", fake.posts[0])
 	}
 	// Retry with the provider ref: found, nothing re-sent.
 	req.ProviderRef = res.ProviderRef
@@ -211,6 +218,10 @@ func TestLostResponseKeepsPreparedIdentityAndDoesNotAppendParts(t *testing.T) {
 	defer func() { _ = db.Close() }()
 	var posts int
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet && r.URL.Path == "/session/ses_1/message" {
+			_, _ = w.Write([]byte(`[]`))
+			return
+		}
 		if r.Method == http.MethodGet {
 			id := strings.TrimPrefix(r.URL.Path, "/session/ses_1/message/")
 			var found string

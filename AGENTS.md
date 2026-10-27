@@ -23,6 +23,10 @@
 
 The optional `ConversationAdapter` prepares daemon-owned structured transports without starting processes or installing global hooks. Callers retain process ownership, durable queues and public API semantics. `Conversation.Turn` is single-submitter and emits visible items with native correlation; native permission requests remain blocked/unanswered. `ConversationReconciler` accepts only explicit terminal turn or UUID/parent-lineage evidence, never arbitrary later assistant text. Hidden reasoning/instructions are excluded. Chat resume requires a native ID; unsupported TUI settings are rejected instead of dropped. See the README's structured conversation section.
 
+## Terminal-owned conversation history
+
+The optional `HistoryReader` (`history.go`, `adapter/*/history.go`) reads a TUI-owned session's visible conversation from the provider's own record, read-only, without starting, resuming or attaching anything: claude transcript JSONL (`turnOrigin`, `promptId` turns, `system/turn_duration` ends; sidechains, meta, hook plumbing and thinking excluded; asyncRewake text unwrapped but provenance kept as `task_notification`), codex rollout segments (`item_completed` items, `task_started` trigger on the turn's first input only, `task_complete`/`turn_aborted` ends; developer/AGENTS.md/reasoning never read), opencode database (user message id = turn and caller ref, `parentID` replies, final finish or error ends; synthetic parts and reasoning excluded; data dir from the session's `XDG_DATA_HOME`). Items carry the provider's unmodified `NativeOrigin` and `Ref`; classification of an input (caller submission, notification, launch prompt, typed input) is the caller's. A missing or unreadable record is an error, never empty history. OpenCode also implements `IdleProber` (`GET /session/status`), and its `DeliverMessage` posts with the agent and model of the session's latest user message, so a delivered message runs as the TUI's own next input would (never OpenCode's default agent).
+
 ## Event Model
 
 - `Event.ID` is caller-owned and is the primary subscription key.

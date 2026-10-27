@@ -164,6 +164,14 @@ type MessagePreparer interface {
 	PrepareMessage(context.Context, DeliverRequest) (string, error)
 }
 
+// IdleProber reads whether the target session is idle from the provider's own
+// running process, closing most of the gap between a hook-reported idle state
+// and the moment of a push (and covering a caller that restarted and has not
+// seen a hook event since). Implemented by OpenCode (GET /session/status).
+type IdleProber interface {
+	ProbeIdle(context.Context, DeliverRequest) (bool, error)
+}
+
 // MessageHookTimeout resolves the Claude waiter timeout of a request.
 func (d *MessageDelivery) MessageHookTimeout() time.Duration {
 	if d == nil || d.HookWaitTimeout <= 0 {

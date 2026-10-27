@@ -335,6 +335,24 @@ when its process was killed (redeliver when the record lacks it after the next
 idle); Codex starts the turn before deleting the queue row, so a crash between
 the two can run the item twice; an OpenCode 204 is acceptance, not processing.
 
+### Reading a terminal-owned conversation
+
+`HistoryReader.ReadHistory` returns the visible items of a session another
+process owns (the TUI), read from the provider's durable record only: stable
+item ids, native turn ids, role, text/tool output, the provider's own
+`NativeOrigin` (Claude `human`/`task_notification`/`queued_command`, Codex
+turn trigger `user`/`queue` on a turn's first input, OpenCode `prompt`), the
+provider-carried `Ref` of an input (Codex `client_id`, OpenCode message id) and
+explicit `TurnEnd` items (`completed`, `failed`, `interrupted`). Claude records
+carry no caller identity, so callers that must correlate their own input embed
+a marker in the delivered text. Instructions, injected context and hidden
+reasoning are never returned; an unreadable record is an error.
+
+`IdleProber` (OpenCode) asks the TUI's own server whether the session is idle,
+which a caller uses instead of hook state right before a push. OpenCode
+`DeliverMessage` carries the latest user message's agent and model, so pushed
+input runs under the session's agent (an architect's named agent included).
+
 ### Resume Behavior
 
 Each adapter synthesizes resume in its own native shape:

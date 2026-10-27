@@ -87,10 +87,25 @@ func (a *Adapter) DeliverMessage(ctx context.Context, req agentruntime.DeliverRe
 		return agentruntime.DeliverResult{Outcome: agentruntime.DeliverAlreadyPresent, ProviderRef: req.ProviderRef}, nil
 	}
 	messageID := req.ProviderRef
-	body, _ := json.Marshal(map[string]any{
+	payload := map[string]any{
 		"messageID": messageID,
 		"parts":     []map[string]any{{"type": "text", "text": req.Text}},
-	})
+	}
+	// prompt_async without an agent runs OpenCode's default agent, not the
+	// session's (an architect's named agent, or whatever the TUI user last
+	// selected). Reuse the agent and model of the latest user turn so the
+	// message runs exactly as the TUI's own next input would.
+	agent, model, err := a.latestUserSelection(ctx, client, base, req.ServerPassword, req.NativeSessionID)
+	if err != nil {
+		return agentruntime.DeliverResult{}, err
+	}
+	if agent != "" {
+		payload["agent"] = agent
+	}
+	if model != nil {
+		payload["model"] = model
+	}
+	body, _ := json.Marshal(payload)
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, base+"/session/"+req.NativeSessionID+"/prompt_async", strings.NewReader(string(body)))
 	if err != nil {
 		return agentruntime.DeliverResult{}, err
@@ -107,6 +122,75 @@ func (a *Adapter) DeliverMessage(ctx context.Context, req agentruntime.DeliverRe
 		return agentruntime.DeliverResult{}, fmt.Errorf("opencode: prompt_async: HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(detail)))
 	}
 	return agentruntime.DeliverResult{Outcome: agentruntime.DeliverAccepted, ProviderRef: messageID}, nil
+}
+
+// ProbeIdle asks the TUI's session server for the session's run state
+// (GET /session/status: sessions absent from the map are idle).
+func (a *Adapter) ProbeIdle(ctx context.Context, req agentruntime.DeliverRequest) (bool, error) {
+	if req.NativeSessionID == "" || req.ServerPort <= 0 || req.ServerPassword == "" {
+		return false, fmt.Errorf("opencode: probe idle: session, server port and password are required")
+	}
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://127.0.0.1:"+strconv.Itoa(req.ServerPort)+"/session/status", nil)
+	if err != nil {
+		return false, err
+	}
+	httpReq.SetBasicAuth(serverUser, req.ServerPassword)
+	resp, err := (&http.Client{Timeout: requestTimeout}).Do(httpReq)
+	if err != nil {
+		return false, fmt.Errorf("opencode: probe idle: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if resp.StatusCode != http.StatusOK {
+		return false, fmt.Errorf("opencode: probe idle: HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+	}
+	var statuses map[string]struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(body, &statuses); err != nil {
+		return false, fmt.Errorf("opencode: probe idle: decode: %w", err)
+	}
+	status, ok := statuses[req.NativeSessionID]
+	return !ok || status.Type == "idle", nil
+}
+
+// latestUserSelection returns the agent and model ({providerID, modelID}) of
+// the session's most recent user message, or empty values for a session with
+// none.
+func (a *Adapter) latestUserSelection(ctx context.Context, client *http.Client, base, password, sessionID string) (string, map[string]any, error) {
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, base+"/session/"+sessionID+"/message", nil)
+	if err != nil {
+		return "", nil, err
+	}
+	httpReq.SetBasicAuth(serverUser, password)
+	resp, err := client.Do(httpReq)
+	if err != nil {
+		return "", nil, fmt.Errorf("opencode: read session agent: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	data, err := io.ReadAll(io.LimitReader(resp.Body, 64<<20))
+	if err != nil {
+		return "", nil, fmt.Errorf("opencode: read session agent: %w", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return "", nil, fmt.Errorf("opencode: read session agent: HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(data)))
+	}
+	var messages []struct {
+		Info struct {
+			Role  string         `json:"role"`
+			Agent string         `json:"agent"`
+			Model map[string]any `json:"model"`
+		} `json:"info"`
+	}
+	if err := json.Unmarshal(data, &messages); err != nil {
+		return "", nil, fmt.Errorf("opencode: read session agent: decode: %w", err)
+	}
+	for i := len(messages) - 1; i >= 0; i-- {
+		if info := messages[i].Info; info.Role == "user" {
+			return info.Agent, info.Model, nil
+		}
+	}
+	return "", nil, nil
 }
 
 func (a *Adapter) messageStatus(ctx context.Context, client *http.Client, base, password, sessionID, messageID string) (int, error) {
