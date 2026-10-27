@@ -52,9 +52,6 @@ func (a *Adapter) EnsureSetup(_ context.Context, req agentruntime.SetupRequest) 
 	if err != nil {
 		return agentruntime.SetupResult{}, err
 	}
-	if err := agentruntime.TargetFileSystem(req.FileSystem).MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return agentruntime.SetupResult{}, err
-	}
 
 	state, err := readJSONMap(path, req.FileSystem)
 	if err != nil {
@@ -72,6 +69,12 @@ func (a *Adapter) EnsureSetup(_ context.Context, req agentruntime.SetupRequest) 
 	// read-modify-write cycles on a config file the agent also owns.
 	if bytes.Equal(before, after) {
 		return agentruntime.SetupResult{Paths: []string{path}}, nil
+	}
+	// The directory is created only for a write: reading a file in a missing
+	// directory is a plain not-exist, and an unchanged remote setup then costs
+	// one round trip instead of two.
+	if err := agentruntime.TargetFileSystem(req.FileSystem).MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return agentruntime.SetupResult{}, err
 	}
 	if err := agentruntime.TargetFileSystem(req.FileSystem).WriteFile(path, after, 0o600); err != nil {
 		return agentruntime.SetupResult{}, err

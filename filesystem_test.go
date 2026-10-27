@@ -16,9 +16,11 @@ import (
 type targetFS struct {
 	files    map[string][]byte
 	sequence int
+	ops      []string
 }
 
 func (f *targetFS) ReadFile(p string) ([]byte, error) {
+	f.ops = append(f.ops, "read")
 	b, ok := f.files[p]
 	if !ok {
 		return nil, os.ErrNotExist
@@ -29,13 +31,14 @@ func (f *targetFS) WriteFile(p string, b []byte, _ os.FileMode) error {
 	if !strings.HasPrefix(p, "/target/") {
 		return fmt.Errorf("not a target path: %s", p)
 	}
+	f.ops = append(f.ops, "write")
 	f.files[p] = b
 	return nil
 }
-func (*targetFS) MkdirAll(string, os.FileMode) error { return nil }
-func (f *targetFS) Remove(p string) error            { delete(f.files, p); return nil }
-func (*targetFS) UserHomeDir() (string, error)       { return "/target/home", nil }
-func (*targetFS) Getenv(string) string               { return "" }
+func (f *targetFS) MkdirAll(string, os.FileMode) error { f.ops = append(f.ops, "mkdir"); return nil }
+func (f *targetFS) Remove(p string) error              { delete(f.files, p); return nil }
+func (*targetFS) UserHomeDir() (string, error)         { return "/target/home", nil }
+func (*targetFS) Getenv(string) string                 { return "" }
 func (f *targetFS) WriteTemp(pattern string, b []byte) (string, error) {
 	f.sequence++
 	p := fmt.Sprintf("/target/tmp/%d-%s", f.sequence, pattern)
@@ -79,6 +82,36 @@ func TestProviderPreparationUsesTargetFilesystem(t *testing.T) {
 			}
 			if _, err := adapter.RemoveSetup(context.Background(), setup); err != nil {
 				t.Fatal(err)
+			}
+		})
+	}
+}
+
+// Each target operation is a remote round trip, so an unchanged setup reads
+// once and a change creates the directory only for its write.
+func TestEnsureSetupTargetRoundTrips(t *testing.T) {
+	adapters := []ar.Adapter{claude.New(claude.DefaultOptions()), codex.New(codex.DefaultOptions()), opencode.New(opencode.DefaultOptions())}
+	for _, adapter := range adapters {
+		t.Run(string(adapter.Agent()), func(t *testing.T) {
+			fs := &targetFS{files: map[string][]byte{}}
+			hook := claude.HookCommand()
+			if adapter.Agent() == ar.AgentCodex {
+				hook = codex.HookCommand()
+			}
+			setup := ar.SetupRequest{Marker: "fixture", Hook: hook, FileSystem: fs}
+			if _, err := adapter.EnsureSetup(context.Background(), setup); err != nil {
+				t.Fatal(err)
+			}
+			if got := strings.Join(fs.ops, ","); got != "read,mkdir,write" {
+				t.Fatalf("first setup ops = %s", got)
+			}
+			fs.ops = nil
+			result, err := adapter.EnsureSetup(context.Background(), setup)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := strings.Join(fs.ops, ","); result.Changed || got != "read" {
+				t.Fatalf("unchanged setup changed=%v ops=%s", result.Changed, got)
 			}
 		})
 	}
