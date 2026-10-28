@@ -36,6 +36,7 @@ func TestConversation204DoesNotMeanCompletion(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 350*time.Millisecond)
 	defer cancel()
 	blocked := false
+	accepted := 0
 	err := c.Turn(ctx, agentruntime.ConversationInput{ID: "01234567-0123-0123-0123-012345678901", Text: "hello"}, func(e agentruntime.ConversationEvent) error {
 		if e.Complete || e.Text == "unrelated answer" {
 			t.Error("accepted unrelated completion")
@@ -43,9 +44,15 @@ func TestConversation204DoesNotMeanCompletion(t *testing.T) {
 		if e.Status == "blocked" {
 			blocked = true
 		}
+		if e.Acceptance != "" {
+			if e.Acceptance != "opencode_prompt_async" || e.Role != "user" || blocked {
+				t.Errorf("acceptance event %#v", e)
+			}
+			accepted++
+		}
 		return nil
 	})
-	if err == nil || !blocked {
-		t.Fatalf("err=%v blocked=%v", err, blocked)
+	if err == nil || !blocked || accepted != 1 {
+		t.Fatalf("err=%v blocked=%v accepted=%d", err, blocked, accepted)
 	}
 }

@@ -28,6 +28,7 @@ createInterface({ input: process.stdin }).on("line", (line) => {
     return send({ jsonrpc: "2.0", id: msg.id, result: { data: q, nextCursor: null } });
   }
   if (msg.method === "thread/queue/add") {
+    if (process.env.FAKE_REJECT_ADD === "1") return send({ jsonrpc: "2.0", id: msg.id, error: { code: -32600, message: "thread not found" } });
     const q = load();
     const item = { id: "qs-" + (q.length + 1), threadId: msg.params.threadId, clientUserMessageId: msg.params.clientUserMessageId, text: msg.params.input[0].text };
     q.push(item);

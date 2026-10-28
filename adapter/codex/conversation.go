@@ -92,6 +92,9 @@ type codexConversation struct {
 
 func (c *codexConversation) NativeID() string { return c.id }
 func (c *codexConversation) Turn(ctx context.Context, in agentruntime.ConversationInput, observe func(agentruntime.ConversationEvent) error) error {
+	// turn/start answering with a turn id, or any item of this thread's turn
+	// arriving before that answer, is the app-server running this input.
+	observe = chatwire.AcceptOnFirst(observe, "codex_turn_start")
 	var tid string
 	onEvent := func(m chatwire.Object) error {
 		p := chatwire.Map(m, "params")

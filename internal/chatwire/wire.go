@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"io"
 	"strings"
+
+	"github.com/hiveryn/agentruntime"
 )
 
 type Object = map[string]any
@@ -110,5 +112,18 @@ func TextContent(value any) string {
 		return strings.Join(parts, "\n")
 	default:
 		return ""
+	}
+}
+
+// AcceptOnFirst marks the first event observed in a turn with the acceptance
+// evidence name; later events pass through unchanged.
+func AcceptOnFirst(observe func(agentruntime.ConversationEvent) error, evidence string) func(agentruntime.ConversationEvent) error {
+	accepted := false
+	return func(e agentruntime.ConversationEvent) error {
+		if !accepted {
+			accepted = true
+			e.Acceptance = evidence
+		}
+		return observe(e)
 	}
 }

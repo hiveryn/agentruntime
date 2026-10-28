@@ -30,6 +30,10 @@ func TestConversationNativeCorrelationAndPermissionWait(t *testing.T) {
 	if len(events) != 3 || events[0].Status != "blocked" || events[1].Text != "answer" || !events[2].Complete {
 		t.Fatalf("events: %#v", events)
 	}
+	// The first output for this input is the acceptance evidence, once.
+	if events[0].Acceptance != "claude_stream_output" || events[1].Acceptance != "" || events[2].Acceptance != "" {
+		t.Fatalf("acceptance: %#v", events)
+	}
 	var msg chatwire.Object
 	if err := json.Unmarshal(sent.Bytes(), &msg); err != nil {
 		t.Fatal(err)

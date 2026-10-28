@@ -30,6 +30,9 @@ func TestConversationCompletesOnlyMatchingNativeTurn(t *testing.T) {
 	if len(events) != 4 || events[1].Status != "blocked" || events[2].Status != "failed" || events[2].Tool != "fixture/echo" || events[2].Text != "original tool failure" || !events[3].Complete || events[3].Status != "completed" {
 		t.Fatalf("events %#v", events)
 	}
+	if events[0].Acceptance != "codex_turn_start" || events[0].TurnID != "turn" || events[1].Acceptance != "" {
+		t.Fatalf("acceptance %#v", events)
+	}
 	if strings.Contains(sent.String(), "decision") {
 		t.Fatal("permission answered")
 	}

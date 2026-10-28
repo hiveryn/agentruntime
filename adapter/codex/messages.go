@@ -42,19 +42,20 @@ func (a *Adapter) MessageCapability() agentruntime.MessageCapability {
 // DeliverMessage enqueues the message unless the queue already holds it.
 func (a *Adapter) DeliverMessage(ctx context.Context, req agentruntime.DeliverRequest) (agentruntime.DeliverResult, error) {
 	if req.NativeSessionID == "" || req.MessageID == "" || strings.TrimSpace(req.Text) == "" {
-		return agentruntime.DeliverResult{}, fmt.Errorf("codex: deliver message: thread id, message id and text are required")
+		return agentruntime.DeliverResult{}, agentruntime.NotDelivered(fmt.Errorf("codex: deliver message: thread id, message id and text are required"))
 	}
+	// Everything before thread/queue/add is sent establishes non-delivery.
 	client, err := startAppServer(ctx, req.Command, req.Env)
 	if err != nil {
-		return agentruntime.DeliverResult{}, err
+		return agentruntime.DeliverResult{}, agentruntime.NotDelivered(err)
 	}
 	defer client.close()
 	if err := client.initialize(ctx); err != nil {
-		return agentruntime.DeliverResult{}, err
+		return agentruntime.DeliverResult{}, agentruntime.NotDelivered(err)
 	}
 	queued, err := client.queued(ctx, req.NativeSessionID, req.MessageID)
 	if err != nil {
-		return agentruntime.DeliverResult{}, err
+		return agentruntime.DeliverResult{}, agentruntime.NotDelivered(err)
 	}
 	if queued != "" {
 		return agentruntime.DeliverResult{Outcome: agentruntime.DeliverAlreadyPresent, ProviderRef: queued}, nil
@@ -69,7 +70,14 @@ func (a *Adapter) DeliverMessage(ctx context.Context, req agentruntime.DeliverRe
 		"clientUserMessageId": req.MessageID,
 		"input":               []map[string]any{{"type": "text", "text": req.Text, "text_elements": []any{}}},
 	}, &result); err != nil {
-		return agentruntime.DeliverResult{}, fmt.Errorf("codex: thread/queue/add: %w", err)
+		err = fmt.Errorf("codex: thread/queue/add: %w", err)
+		// An error response is the app-server refusing the item; a write,
+		// read or deadline failure leaves it unknown.
+		var refused *rpcError
+		if errors.As(err, &refused) {
+			return agentruntime.DeliverResult{}, agentruntime.NotDelivered(err)
+		}
+		return agentruntime.DeliverResult{}, err
 	}
 	return agentruntime.DeliverResult{Outcome: agentruntime.DeliverAccepted, ProviderRef: result.QueuedSubmission.ID}, nil
 }
@@ -214,6 +222,14 @@ type rpcResponse struct {
 	} `json:"error"`
 }
 
+// rpcError is an error response the app-server answered.
+type rpcError struct {
+	Code    int
+	Message string
+}
+
+func (e *rpcError) Error() string { return fmt.Sprintf("%s (code %d)", e.Message, e.Code) }
+
 func startAppServer(ctx context.Context, command string, env map[string]string) (*appServerClient, error) {
 	if command == "" {
 		command = "codex"
@@ -331,7 +347,7 @@ func (c *appServerClient) call(ctx context.Context, method string, params any, r
 			continue
 		}
 		if resp.Error != nil {
-			return fmt.Errorf("%s (code %d)", resp.Error.Message, resp.Error.Code)
+			return &rpcError{Code: resp.Error.Code, Message: resp.Error.Message}
 		}
 		if result != nil && len(resp.Result) > 0 {
 			if err := json.Unmarshal(resp.Result, result); err != nil {

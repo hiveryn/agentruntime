@@ -36,6 +36,12 @@ type ConversationEvent struct {
 	At     time.Time
 	// Complete is explicit native turn completion, independent of tool errors.
 	Complete bool
+	// Acceptance is set on the turn's first event that establishes the
+	// provider accepted the input, naming that evidence (for example
+	// "claude_stream_output", "codex_turn_start", "opencode_prompt_async").
+	// Acceptance is not completion; a turn that fails before any such event
+	// leaves acceptance unknown.
+	Acceptance string
 }
 
 // ConversationReconciler reads provider-owned records after the previous owner

@@ -84,14 +84,21 @@ func TestDeliverMessageEnqueuesOnceUnderCallerID(t *testing.T) {
 	// The wrong CODEX_HOME is an error, never a silent miss.
 	bad := req
 	bad.Env = map[string]string{"CODEX_HOME": "/elsewhere", "FAKE_QUEUE_FILE": queueFile, "FAKE_EXPECT_HOME": home}
-	if _, err := adapter.DeliverMessage(context.Background(), bad); err == nil || !strings.Contains(err.Error(), "wrong CODEX_HOME") {
+	if _, err := adapter.DeliverMessage(context.Background(), bad); err == nil || !strings.Contains(err.Error(), "wrong CODEX_HOME") || !agentruntime.IsNotDelivered(err) {
 		t.Fatalf("wrong home err = %v", err)
 	}
-	// A missing executable is reported.
+	// A missing executable is reported, and nothing was sent.
 	missing := req
 	missing.Command = filepath.Join(t.TempDir(), "nope")
-	if _, err := adapter.DeliverMessage(context.Background(), missing); err == nil {
-		t.Fatal("missing executable accepted")
+	if _, err := adapter.DeliverMessage(context.Background(), missing); err == nil || !agentruntime.IsNotDelivered(err) {
+		t.Fatalf("missing executable err = %v", err)
+	}
+	// An error answer to thread/queue/add is the app-server refusing it.
+	refused := req
+	refused.MessageID = "msg-uuid-3"
+	refused.Env = map[string]string{"CODEX_HOME": home, "FAKE_QUEUE_FILE": queueFile, "FAKE_EXPECT_HOME": home, "FAKE_REJECT_ADD": "1"}
+	if _, err := adapter.DeliverMessage(context.Background(), refused); err == nil || !strings.Contains(err.Error(), "thread not found") || !agentruntime.IsNotDelivered(err) {
+		t.Fatalf("refused add err = %v", err)
 	}
 }
 
@@ -142,8 +149,8 @@ func TestAcceptedQueueWriteWithLostResponseIsFoundByStableID(t *testing.T) {
 	command, queue := fakeCodex(t)
 	home := t.TempDir()
 	req := agentruntime.DeliverRequest{Command: command, Env: map[string]string{"CODEX_HOME": home, "FAKE_EXPECT_HOME": home, "FAKE_QUEUE_FILE": queue, "FAKE_LOSE_ADD_RESPONSE": "1"}, NativeSessionID: "thread", MessageID: "stable", Text: "hello"}
-	if _, err := adapter.DeliverMessage(context.Background(), req); err == nil {
-		t.Fatal("expected lost response")
+	if _, err := adapter.DeliverMessage(context.Background(), req); err == nil || agentruntime.IsNotDelivered(err) {
+		t.Fatalf("lost response must leave acceptance unknown, got %v", err)
 	}
 	receipt, err := adapter.ConfirmMessage(context.Background(), agentruntime.ConfirmRequest{Command: command, Env: req.Env, NativeSessionID: "thread", MessageID: "stable"})
 	if err != nil || !receipt.Queued {

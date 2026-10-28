@@ -137,10 +137,12 @@ func (c *ocConversation) Turn(ctx context.Context, in agentruntime.ConversationI
 		}
 		body["model"] = chatwire.Object{"providerID": p[0], "modelID": p[1]}
 	}
-	if err := observe(agentruntime.ConversationEvent{ID: in.ID, TurnID: mid, Role: "user", Text: in.Text, Status: "started", At: time.Now().UTC()}); err != nil {
+	if _, err := c.call(ctx, "POST", "/session/"+c.id+"/prompt_async", body); err != nil {
 		return err
 	}
-	if _, err := c.call(ctx, "POST", "/session/"+c.id+"/prompt_async", body); err != nil {
+	// A 2xx from prompt_async is the server accepting the input; completion
+	// is the assistant message finishing below.
+	if err := observe(agentruntime.ConversationEvent{ID: in.ID, TurnID: mid, Role: "user", Text: in.Text, Status: "started", At: time.Now().UTC(), Acceptance: "opencode_prompt_async"}); err != nil {
 		return err
 	}
 	seen := map[string]string{}

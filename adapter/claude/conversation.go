@@ -58,6 +58,10 @@ type claudeConversation struct {
 
 func (c *claudeConversation) NativeID() string { return c.id }
 func (c *claudeConversation) Turn(ctx context.Context, in agentruntime.ConversationInput, observe func(agentruntime.ConversationEvent) error) error {
+	// One turn at a time: any output after the input was written (its replayed
+	// echo, assistant/tool output, a permission request, the result) is the
+	// CLI processing this input.
+	observe = chatwire.AcceptOnFirst(observe, "claude_stream_output")
 	m := chatwire.Object{"type": "user", "uuid": in.ID, "session_id": c.id, "message": chatwire.Object{"role": "user", "content": in.Text}, "parent_tool_use_id": nil}
 	if err := c.wire.Send(m); err != nil {
 		return err

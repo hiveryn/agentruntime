@@ -2,6 +2,7 @@ package agentruntime
 
 import (
 	"context"
+	"errors"
 	"time"
 )
 
@@ -145,6 +146,29 @@ type MessageReceipt struct {
 	Acknowledged    bool
 	Queued          bool
 	RecordedThrough time.Time
+}
+
+// NotDeliveredError marks a DeliverMessage error that establishes the message
+// did not reach the provider: a failure before anything was sent, or the
+// provider explicitly refusing it. Any other DeliverMessage error (a transport
+// failure or timeout after sending began) leaves acceptance unknown.
+type NotDeliveredError struct{ Err error }
+
+func (e *NotDeliveredError) Error() string { return e.Err.Error() }
+func (e *NotDeliveredError) Unwrap() error { return e.Err }
+
+// NotDelivered wraps err as a NotDeliveredError (nil stays nil).
+func NotDelivered(err error) error {
+	if err == nil {
+		return nil
+	}
+	return &NotDeliveredError{Err: err}
+}
+
+// IsNotDelivered reports whether err establishes non-delivery.
+func IsNotDelivered(err error) bool {
+	var target *NotDeliveredError
+	return errors.As(err, &target)
 }
 
 // MessageDeliverer is implemented by adapters that can deliver messages into

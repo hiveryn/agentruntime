@@ -95,8 +95,8 @@ func TestDeliverMessagePostsOnceAndNeverResendsAnExistingID(t *testing.T) {
 	portNum := server.Listener.Addr().(*net.TCPAddr).Port
 	req := agentruntime.DeliverRequest{NativeSessionID: "ses_1", ServerPort: portNum, ServerPassword: "pw", MessageID: "m-1", Text: "Hiveryn message m-1: hello"}
 
-	if _, err := adapter.DeliverMessage(context.Background(), req); err == nil {
-		t.Fatal("unprepared delivery accepted")
+	if _, err := adapter.DeliverMessage(context.Background(), req); err == nil || !agentruntime.IsNotDelivered(err) {
+		t.Fatalf("unprepared delivery err = %v", err)
 	}
 	req.ProviderRef, _ = adapter.PrepareMessage(context.Background(), req)
 	if len(fake.posts) != 0 {
@@ -132,7 +132,7 @@ func TestDeliverMessagePostsOnceAndNeverResendsAnExistingID(t *testing.T) {
 	}
 	// Wrong password is an error, not a silent miss.
 	req.ServerPassword = "nope"
-	if _, err := adapter.DeliverMessage(context.Background(), req); err == nil || !strings.Contains(err.Error(), "password") {
+	if _, err := adapter.DeliverMessage(context.Background(), req); err == nil || !strings.Contains(err.Error(), "password") || !agentruntime.IsNotDelivered(err) {
 		t.Fatalf("password err = %v", err)
 	}
 	req.ServerPassword = "pw"
@@ -259,8 +259,8 @@ func TestLostResponseKeepsPreparedIdentityAndDoesNotAppendParts(t *testing.T) {
 		t.Fatal(err)
 	}
 	saved := req.ProviderRef // caller persists this before the request
-	if _, err := adapter.DeliverMessage(context.Background(), req); err == nil {
-		t.Fatal("expected lost response")
+	if _, err := adapter.DeliverMessage(context.Background(), req); err == nil || agentruntime.IsNotDelivered(err) {
+		t.Fatalf("lost response must leave acceptance unknown, got %v", err)
 	}
 	adapter = New(DefaultOptions()) // no in-memory identity recovery
 	receipt, err := adapter.ConfirmMessage(context.Background(), agentruntime.ConfirmRequest{TranscriptHandle: dbPath + pathSep + "ses_1", ProviderRef: saved})
@@ -274,5 +274,31 @@ func TestLostResponseKeepsPreparedIdentityAndDoesNotAppendParts(t *testing.T) {
 	result, err := adapter.DeliverMessage(context.Background(), req)
 	if err != nil || result.Outcome != agentruntime.DeliverAlreadyPresent || posts != 1 {
 		t.Fatalf("duplicate parts: %+v %v posts=%d", result, err, posts)
+	}
+}
+
+func TestPromptAsyncRefusalIsNotDeliveredButServerErrorIsUnknown(t *testing.T) {
+	adapter := New(DefaultOptions())
+	for _, tc := range []struct {
+		status       int
+		notDelivered bool
+	}{{http.StatusBadRequest, true}, {http.StatusInternalServerError, false}} {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			switch {
+			case r.Method == http.MethodGet && r.URL.Path == "/session/ses_1/message":
+				_, _ = w.Write([]byte(`[]`))
+			case r.Method == http.MethodGet:
+				w.WriteHeader(http.StatusNotFound)
+			default:
+				w.WriteHeader(tc.status)
+				_, _ = w.Write([]byte("nope"))
+			}
+		}))
+		req := agentruntime.DeliverRequest{NativeSessionID: "ses_1", ServerPort: server.Listener.Addr().(*net.TCPAddr).Port, ServerPassword: "pw", MessageID: "m", Text: "hello", ProviderRef: "msg_000000000000AAAAAAAAAAAAAA"}
+		_, err := adapter.DeliverMessage(context.Background(), req)
+		server.Close()
+		if err == nil || agentruntime.IsNotDelivered(err) != tc.notDelivered {
+			t.Fatalf("HTTP %d: err = %v, not delivered = %v", tc.status, err, agentruntime.IsNotDelivered(err))
+		}
 	}
 }

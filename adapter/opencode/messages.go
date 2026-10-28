@@ -72,16 +72,17 @@ func (a *Adapter) PrepareMessage(ctx context.Context, req agentruntime.DeliverRe
 // text parts when a previous POST succeeded but its response was lost.
 func (a *Adapter) DeliverMessage(ctx context.Context, req agentruntime.DeliverRequest) (agentruntime.DeliverResult, error) {
 	if req.NativeSessionID == "" || strings.TrimSpace(req.Text) == "" || req.ServerPort <= 0 || req.ServerPassword == "" {
-		return agentruntime.DeliverResult{}, fmt.Errorf("opencode: deliver message: session, text, server port and password are required")
+		return agentruntime.DeliverResult{}, agentruntime.NotDelivered(fmt.Errorf("opencode: deliver message: session, text, server port and password are required"))
 	}
 	if req.ProviderRef == "" {
-		return agentruntime.DeliverResult{}, fmt.Errorf("opencode: prepare and persist a provider reference before delivery")
+		return agentruntime.DeliverResult{}, agentruntime.NotDelivered(fmt.Errorf("opencode: prepare and persist a provider reference before delivery"))
 	}
 	client := &http.Client{Timeout: requestTimeout}
 	base := "http://127.0.0.1:" + strconv.Itoa(req.ServerPort)
+	// Everything before prompt_async is sent establishes non-delivery.
 	status, err := a.messageStatus(ctx, client, base, req.ServerPassword, req.NativeSessionID, req.ProviderRef)
 	if err != nil {
-		return agentruntime.DeliverResult{}, err
+		return agentruntime.DeliverResult{}, agentruntime.NotDelivered(err)
 	}
 	if status == http.StatusOK {
 		return agentruntime.DeliverResult{Outcome: agentruntime.DeliverAlreadyPresent, ProviderRef: req.ProviderRef}, nil
@@ -97,7 +98,7 @@ func (a *Adapter) DeliverMessage(ctx context.Context, req agentruntime.DeliverRe
 	// message runs exactly as the TUI's own next input would.
 	agent, model, err := a.latestUserSelection(ctx, client, base, req.ServerPassword, req.NativeSessionID)
 	if err != nil {
-		return agentruntime.DeliverResult{}, err
+		return agentruntime.DeliverResult{}, agentruntime.NotDelivered(err)
 	}
 	if agent != "" {
 		payload["agent"] = agent
@@ -108,7 +109,7 @@ func (a *Adapter) DeliverMessage(ctx context.Context, req agentruntime.DeliverRe
 	body, _ := json.Marshal(payload)
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, base+"/session/"+req.NativeSessionID+"/prompt_async", strings.NewReader(string(body)))
 	if err != nil {
-		return agentruntime.DeliverResult{}, err
+		return agentruntime.DeliverResult{}, agentruntime.NotDelivered(err)
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.SetBasicAuth(serverUser, req.ServerPassword)
@@ -119,7 +120,13 @@ func (a *Adapter) DeliverMessage(ctx context.Context, req agentruntime.DeliverRe
 	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		detail, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
-		return agentruntime.DeliverResult{}, fmt.Errorf("opencode: prompt_async: HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(detail)))
+		err := fmt.Errorf("opencode: prompt_async: HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(detail)))
+		// A 4xx is the server refusing the request; a 5xx may have failed
+		// after storing the message, so it stays unknown.
+		if resp.StatusCode < 500 {
+			err = agentruntime.NotDelivered(err)
+		}
+		return agentruntime.DeliverResult{}, err
 	}
 	return agentruntime.DeliverResult{Outcome: agentruntime.DeliverAccepted, ProviderRef: messageID}, nil
 }
