@@ -126,14 +126,18 @@ func runWaiter(t *testing.T, endpoint string, hook map[string]any) (int, string)
 
 func TestMessageWaiterExits2WithTextAndRetriesTransportErrors(t *testing.T) {
 	var seen struct {
-		body  map[string]any
-		calls int
+		body   map[string]any
+		bodies []map[string]any
+		calls  int
 	}
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		seen.calls++
 		if r.URL.Path != "/claude/wait" || r.Method != http.MethodPost {
 			t.Errorf("unexpected %s %s", r.Method, r.URL.Path)
 		}
+		var body map[string]any
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		seen.bodies = append(seen.bodies, body)
 		if seen.calls == 1 {
 			// A dropped connection must be retried in-process.
 			hj, _ := w.(http.Hijacker)
@@ -141,7 +145,7 @@ func TestMessageWaiterExits2WithTextAndRetriesTransportErrors(t *testing.T) {
 			_ = conn.Close()
 			return
 		}
-		_ = json.NewDecoder(r.Body).Decode(&seen.body)
+		seen.body = body
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"id":"m1","text":"Hiveryn message m1: Ticket X concluded"}`))
 	}))
@@ -152,6 +156,14 @@ func TestMessageWaiterExits2WithTextAndRetriesTransportErrors(t *testing.T) {
 	}
 	if seen.calls != 2 || seen.body["env"].(map[string]any)["AGENTRUNTIME_SESSION_ID"] != "hiv-1" || seen.body["hook"].(map[string]any)["session_id"] != "native-1" {
 		t.Fatalf("calls %d body %+v", seen.calls, seen.body)
+	}
+	// The retry is the same waiter reconnecting: same start, next attempt.
+	first, retry := seen.bodies[0]["waiter"].(map[string]any), seen.bodies[1]["waiter"].(map[string]any)
+	if first["attempt"] != float64(0) || retry["attempt"] != float64(1) || first["started"] != retry["started"] {
+		t.Fatalf("waiter identity: first %+v retry %+v", first, retry)
+	}
+	if started, _ := first["started"].(float64); started <= 0 || time.Since(time.UnixMilli(int64(started))) > time.Minute {
+		t.Fatalf("waiter start %v", first["started"])
 	}
 }
 

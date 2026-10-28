@@ -10,14 +10,19 @@ import (
 // Mailbox is the caller side of pull-mode message delivery (Claude's
 // asyncRewake hooks). Each SessionStart and Stop hook of a session arms one
 // long-polling waiter here; the newest waiter supersedes the previous one
-// (which is answered 204 so its hook exits 0). A message handed to the armed
+// (which is answered 204 so its hook exits 0). Newest is by the hook's own
+// start time when the waiter reports it: a retry of an earlier waiter that
+// arrives late (its connection was down, or its receiver restarted) is
+// answered 204 instead of displacing a later one. A message handed to the armed
 // waiter is written as the 200 response; the hook prints it to stderr and
 // exits 2, which wakes the idle model with the text.
 //
 // The mailbox holds no messages: durability, the idle gate and the decision to
 // hand over belong to the caller, which learns about waiters through the
 // observers. A waiter whose connection drops is forgotten, so Armed reflects
-// what a hand-off can actually reach.
+// what a hand-off can actually reach. Arming says only that: a waiter
+// re-posting after a lost connection carries the hook event that started it,
+// which is no evidence of what the agent does now (Attempt tells them apart).
 type Mailbox struct {
 	mu      sync.Mutex
 	waiters map[string]*mailboxWaiter
@@ -38,6 +43,13 @@ type Waiter struct {
 	// empty for Stop.
 	Source  string
 	ArmedAt time.Time
+	// HookStartedAt is when the hook process started, by the clock of the
+	// machine it runs on; zero when the waiter does not report it. Only
+	// waiters of one session (one machine) are compared.
+	HookStartedAt time.Time
+	// Attempt counts the waiter's posts before this one: 0 is its first,
+	// more is the same hook reconnecting after a transport error or a 503.
+	Attempt int
 	seq     uint64
 }
 
@@ -56,8 +68,13 @@ type mailboxWaiter struct {
 }
 
 type waitEnvelope struct {
-	Hook map[string]any    `json:"hook"`
-	Env  map[string]string `json:"env"`
+	Hook   map[string]any    `json:"hook"`
+	Env    map[string]string `json:"env"`
+	Waiter struct {
+		// Started is the hook's start time in Unix milliseconds.
+		Started int64 `json:"started"`
+		Attempt int   `json:"attempt"`
+	} `json:"waiter"`
 }
 
 func NewMailbox() *Mailbox {
@@ -95,6 +112,10 @@ func (m *Mailbox) Handler() http.Handler {
 			HookEvent:       hookString(env.Hook, "hook_event_name"),
 			Source:          hookString(env.Hook, "source"),
 			ArmedAt:         time.Now(),
+			Attempt:         env.Waiter.Attempt,
+		}
+		if env.Waiter.Started > 0 {
+			waiter.HookStartedAt = time.UnixMilli(env.Waiter.Started)
 		}
 		if waiter.SessionID == "" {
 			waiter.SessionID = waiter.NativeSessionID
@@ -114,8 +135,9 @@ func (m *Mailbox) Handler() http.Handler {
 					http.Error(w, "receiver restarting; retry", http.StatusServiceUnavailable)
 					return
 				}
-				// Superseded by a newer waiter, or the mailbox closed: the
-				// hook exits 0 and the newer waiter carries on.
+				// Superseded by a newer waiter (or older than the armed
+				// one), or the mailbox closed: the hook exits 0 and the
+				// newer waiter carries on.
 				w.WriteHeader(http.StatusNoContent)
 				return
 			}
@@ -132,13 +154,20 @@ func (m *Mailbox) Handler() http.Handler {
 	})
 }
 
-// arm registers the waiter, superseding the session's previous one.
+// arm registers the waiter, superseding the session's previous one, unless
+// the armed waiter's hook started after this one's: then this one is
+// answered as superseded right away and the armed one stays.
 func (m *Mailbox) arm(waiter Waiter) *mailboxWaiter {
 	m.mu.Lock()
 	m.seq++
 	waiter.seq = m.seq
 	entry := &mailboxWaiter{waiter: waiter, ch: make(chan MailboxMessage, 1)}
 	previous := m.waiters[waiter.SessionID]
+	if previous != nil && startedBefore(waiter, previous.waiter) {
+		m.mu.Unlock()
+		close(entry.ch)
+		return entry
+	}
 	m.waiters[waiter.SessionID] = entry
 	armed := m.armed
 	gone := m.gone
@@ -153,6 +182,11 @@ func (m *Mailbox) arm(waiter Waiter) *mailboxWaiter {
 		armed(waiter)
 	}
 	return entry
+}
+
+// startedBefore reports that a's hook started before b's, when both say.
+func startedBefore(a, b Waiter) bool {
+	return !a.HookStartedAt.IsZero() && !b.HookStartedAt.IsZero() && a.HookStartedAt.Before(b.HookStartedAt)
 }
 
 // forget drops the entry if it is still the session's current waiter.

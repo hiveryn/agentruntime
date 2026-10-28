@@ -20,7 +20,11 @@ import (
 // waiter exits 0 without an endpoint, when superseded by a newer waiter or
 // when the mailbox says the session is unknown (404), and retries transport
 // errors in-process: once the hook exits, nothing re-arms the session until
-// its next hook event, so a lost connection must not end it.
+// its next hook event, so a lost connection must not end it. Every attempt
+// re-posts the hook's envelope with the waiter's start time (its host clock,
+// taken once when the hook runs) and attempt number: a retry is the same hook
+// reconnecting, never a new hook event, and the mailbox keeps a waiter started
+// later over one started earlier whatever order their posts arrive in.
 
 // MessageCapability describes the asyncRewake route.
 func (a *Adapter) MessageCapability() agentruntime.MessageCapability {
@@ -128,10 +132,9 @@ func messageWaiterCommand() string {
 
 const messageWaiterScript = `let d="";process.stdin.on("data",c=>d+=c);process.stdin.on("end",()=>{` +
 	`const e=process.env.AGENTRUNTIME_HOOK_ENDPOINT||"";if(!e)process.exit(0);` +
-	`let h={};try{h=JSON.parse(d||"{}")}catch(x){}` +
-	`const b=JSON.stringify({agent:"claude",hook:h,env:{AGENTRUNTIME_SESSION_ID:process.env.AGENTRUNTIME_SESSION_ID||""}});` +
+	`let h={};try{h=JSON.parse(d||"{}")}catch(x){}const t0=Date.now();let n=0;` +
 	`const u=new URL(e+"/claude/wait");const m=u.protocol==="https:"?require("https"):require("http");` +
-	`const once=()=>new Promise(r=>{const q=m.request(u.href,{method:"POST",headers:{"Content-Type":"application/json"}},s=>{let o="";s.on("data",c=>o+=c);s.on("end",()=>r({s:s.statusCode,o}))});q.on("error",x=>r({err:String(x)}));q.write(b);q.end()});` +
+	`const once=()=>new Promise(r=>{const b=JSON.stringify({agent:"claude",hook:h,env:{AGENTRUNTIME_SESSION_ID:process.env.AGENTRUNTIME_SESSION_ID||""},waiter:{started:t0,attempt:n++}});const q=m.request(u.href,{method:"POST",headers:{"Content-Type":"application/json"}},s=>{let o="";s.on("data",c=>o+=c);s.on("end",()=>r({s:s.statusCode,o}))});q.on("error",x=>r({err:String(x)}));q.write(b);q.end()});` +
 	`(async()=>{for(;;){const r=await once();` +
 	`if(r.s===204||r.s===404||r.s===400)process.exit(0);` +
 	`if(r.s===200){let t=r.o;try{t=JSON.parse(r.o).text||r.o}catch(x){}process.stderr.write(String(t)+"\n");process.exit(2)}` +

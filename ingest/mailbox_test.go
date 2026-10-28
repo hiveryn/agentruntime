@@ -232,3 +232,64 @@ func TestMailboxInterruptReleasesForRetry(t *testing.T) {
 		t.Fatalf("closed waiter status %d", status)
 	}
 }
+
+func waitBodyStarted(event, session string, started int64, attempt int) []byte {
+	b, _ := json.Marshal(map[string]any{
+		"hook":   map[string]any{"hook_event_name": event, "session_id": "native-" + session},
+		"env":    map[string]string{"AGENTRUNTIME_SESSION_ID": session},
+		"waiter": map[string]any{"started": started, "attempt": attempt},
+	})
+	return b
+}
+
+// A waiter whose post was delayed (lost connection, restarting receiver)
+// arrives after a waiter whose hook started later: it is answered 204 and the
+// later one stays armed, unobserved by the armed observer.
+func TestMailboxKeepsTheLaterStartedWaiterOverADelayedRetry(t *testing.T) {
+	m := NewMailbox()
+	obs := &observed{}
+	m.SetObservers(func(w Waiter) { obs.mu.Lock(); obs.armed = append(obs.armed, w); obs.mu.Unlock() }, nil)
+	server := httptest.NewServer(m.Handler())
+	defer server.Close()
+	defer m.Close()
+	post := func(body []byte) <-chan int {
+		out := make(chan int, 1)
+		go func() {
+			resp, err := http.Post(server.URL, "application/json", bytes.NewReader(body))
+			if err != nil {
+				out <- -1
+				return
+			}
+			_ = resp.Body.Close()
+			out <- resp.StatusCode
+		}()
+		return out
+	}
+	newer := post(waitBodyStarted("Stop", "s1", 2000, 0))
+	waitFor(t, func() bool { w, ok := m.Armed("s1"); return ok && w.HookStartedAt.Equal(time.UnixMilli(2000)) })
+
+	if status := <-post(waitBodyStarted("Stop", "s1", 1000, 3)); status != http.StatusNoContent {
+		t.Fatalf("delayed older retry status %d", status)
+	}
+	if w, ok := m.Armed("s1"); !ok || !w.HookStartedAt.Equal(time.UnixMilli(2000)) || w.Attempt != 0 {
+		t.Fatalf("armed = %+v, %v", w, ok)
+	}
+	if armed, _ := obs.snapshot(); len(armed) != 1 {
+		t.Fatalf("armed observer = %+v", armed)
+	}
+
+	// The later one retrying (same start) and a later hook still supersede.
+	m.Interrupt("s1")
+	if status := <-newer; status != http.StatusServiceUnavailable {
+		t.Fatalf("interrupted status %d", status)
+	}
+	retry := post(waitBodyStarted("Stop", "s1", 2000, 1))
+	waitFor(t, func() bool { w, ok := m.Armed("s1"); return ok && w.Attempt == 1 })
+	later := post(waitBodyStarted("Stop", "s1", 3000, 0))
+	if status := <-retry; status != http.StatusNoContent {
+		t.Fatalf("superseded retry status %d", status)
+	}
+	waitFor(t, func() bool { w, ok := m.Armed("s1"); return ok && w.HookStartedAt.Equal(time.UnixMilli(3000)) })
+	m.Close()
+	<-later
+}
