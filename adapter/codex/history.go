@@ -171,3 +171,19 @@ func (h *historyReader) item(item chatwire.Object, turn string, at time.Time) {
 		h.put(agentruntime.HistoryItem{ID: id, TurnID: turn, Role: "tool", Tool: tool, Status: status, Text: text, At: at})
 	}
 }
+
+// RecordLocation: every rollout segment of the thread, in the dated layout and
+// the older flat one (rollout.go). Candidates are verified from their first
+// line when read, never trusted by name.
+func (a *Adapter) RecordLocation(nativeSessionID string) agentruntime.RecordLocation {
+	return agentruntime.RecordLocation{RootEnv: "CODEX_HOME", DefaultRoot: ".codex", Patterns: []string{
+		"sessions/*/*/*/rollout-*-" + nativeSessionID + "*.jsonl",
+		"sessions/rollout-*-" + nativeSessionID + "*.jsonl",
+	}}
+}
+
+// HistoryRecordRequest reads the fetched copy as the thread's CODEX_HOME:
+// segments are located and verified there exactly as in a local home.
+func (a *Adapter) HistoryRecordRequest(nativeSessionID, copyRoot string, _ []string) (agentruntime.HistoryRequest, error) {
+	return agentruntime.HistoryRequest{NativeSessionID: nativeSessionID, ConfigRoot: copyRoot}, nil
+}

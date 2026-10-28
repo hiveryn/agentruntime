@@ -3,6 +3,7 @@ package agentruntime
 import (
 	"context"
 	"errors"
+	"os/exec"
 	"time"
 )
 
@@ -98,6 +99,9 @@ type DeliverRequest struct {
 	// attempt. Other providers may return an additional reference on acceptance.
 	ProviderRef string
 	Text        string
+	// Exec, when set, builds the provider helper process (Codex app-server)
+	// on the session's own machine; see CommandFunc.
+	Exec CommandFunc
 }
 
 // DeliverOutcome is what a push achieved.
@@ -129,6 +133,9 @@ type ConfirmRequest struct {
 	NativeSessionID  string
 	MessageID        string
 	ProviderRef      string
+	// Exec, when set, builds the provider helper process on the session's own
+	// machine; see CommandFunc.
+	Exec CommandFunc
 }
 
 // MessageReceipt is the provider's own record of a message. Appeared means the
@@ -202,4 +209,21 @@ func (d *MessageDelivery) MessageHookTimeout() time.Duration {
 		return DefaultMessageHookTimeout
 	}
 	return d.HookWaitTimeout
+}
+
+// CommandFunc builds the process of a provider helper command (Codex's
+// app-server) where the session runs. Nil runs it locally with Env layered
+// over the caller's environment. A caller running it elsewhere (over SSH) owns
+// that target's environment entirely: env is the session's launch environment
+// to apply there, never merged with the caller's own. The adapter attaches
+// stdin/stdout/stderr and starts the command; cancelling ctx must end it, and
+// the helper must exit when its stdin closes.
+type CommandFunc func(ctx context.Context, command string, args []string, env map[string]string) (*exec.Cmd, error)
+
+// QueueInspector reports whether the provider still holds a message in its own
+// durable queue, without reading the conversation record (the caller reads the
+// record itself, for example from a copy fetched from another machine).
+// Implemented by Codex.
+type QueueInspector interface {
+	MessageQueued(context.Context, ConfirmRequest) (bool, error)
 }

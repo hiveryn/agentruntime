@@ -45,7 +45,7 @@ func (a *Adapter) DeliverMessage(ctx context.Context, req agentruntime.DeliverRe
 		return agentruntime.DeliverResult{}, agentruntime.NotDelivered(fmt.Errorf("codex: deliver message: thread id, message id and text are required"))
 	}
 	// Everything before thread/queue/add is sent establishes non-delivery.
-	client, err := startAppServer(ctx, req.Command, req.Env)
+	client, err := startAppServer(ctx, req.Exec, req.Command, req.Env)
 	if err != nil {
 		return agentruntime.DeliverResult{}, agentruntime.NotDelivered(err)
 	}
@@ -116,20 +116,32 @@ func (a *Adapter) ConfirmMessage(ctx context.Context, req agentruntime.ConfirmRe
 	if receipt.Appeared || req.NativeSessionID == "" {
 		return receipt, nil
 	}
-	client, err := startAppServer(ctx, req.Command, req.Env)
+	receipt.Queued, err = a.MessageQueued(ctx, req)
 	if err != nil {
 		return agentruntime.MessageReceipt{}, err
+	}
+	return receipt, nil
+}
+
+// MessageQueued lists the thread's durable queue for the message id, through
+// an app-server started by req.Exec (or locally), without reading rollouts.
+func (a *Adapter) MessageQueued(ctx context.Context, req agentruntime.ConfirmRequest) (bool, error) {
+	if req.NativeSessionID == "" || req.MessageID == "" {
+		return false, fmt.Errorf("codex: message queued: thread id and message id are required")
+	}
+	client, err := startAppServer(ctx, req.Exec, req.Command, req.Env)
+	if err != nil {
+		return false, err
 	}
 	defer client.close()
 	if err := client.initialize(ctx); err != nil {
-		return agentruntime.MessageReceipt{}, err
+		return false, err
 	}
 	queued, err := client.queued(ctx, req.NativeSessionID, req.MessageID)
 	if err != nil {
-		return agentruntime.MessageReceipt{}, err
+		return false, err
 	}
-	receipt.Queued = queued != ""
-	return receipt, nil
+	return queued != "", nil
 }
 
 // scanRollouts reads the segments in order and finds the user message with
@@ -230,12 +242,20 @@ type rpcError struct {
 
 func (e *rpcError) Error() string { return fmt.Sprintf("%s (code %d)", e.Message, e.Code) }
 
-func startAppServer(ctx context.Context, command string, env map[string]string) (*appServerClient, error) {
+func startAppServer(ctx context.Context, build agentruntime.CommandFunc, command string, env map[string]string) (*appServerClient, error) {
 	if command == "" {
 		command = "codex"
 	}
-	cmd := exec.CommandContext(ctx, command, "app-server")
-	cmd.Env = mergeOSEnv(env)
+	var cmd *exec.Cmd
+	if build != nil {
+		var err error
+		if cmd, err = build(ctx, command, []string{"app-server"}, env); err != nil {
+			return nil, fmt.Errorf("codex app-server command: %w", err)
+		}
+	} else {
+		cmd = exec.CommandContext(ctx, command, "app-server")
+		cmd.Env = mergeOSEnv(env)
+	}
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		return nil, fmt.Errorf("codex app-server stdin: %w", err)

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -166,4 +167,21 @@ func unwrapRewake(text string) string {
 		body = body[:end]
 	}
 	return strings.TrimSpace(body)
+}
+
+// RecordLocation: a session's transcript is <root>/projects/<project>/<id>.jsonl.
+func (a *Adapter) RecordLocation(nativeSessionID string) agentruntime.RecordLocation {
+	return agentruntime.RecordLocation{RootEnv: "CLAUDE_CONFIG_DIR", DefaultRoot: ".claude", Patterns: []string{"projects/*/" + nativeSessionID + ".jsonl"}}
+}
+
+// HistoryRecordRequest reads the one fetched transcript of the session, with
+// the same not-found and ambiguity rules as LocateTranscript.
+func (a *Adapter) HistoryRecordRequest(nativeSessionID, copyRoot string, files []string) (agentruntime.HistoryRequest, error) {
+	switch len(files) {
+	case 0:
+		return agentruntime.HistoryRequest{}, fmt.Errorf("claude: transcript not found for session %q", nativeSessionID)
+	case 1:
+		return agentruntime.HistoryRequest{NativeSessionID: nativeSessionID, TranscriptHandle: filepath.Join(copyRoot, filepath.FromSlash(files[0]))}, nil
+	}
+	return agentruntime.HistoryRequest{}, fmt.Errorf("claude: ambiguous transcript for session %q: %d matches", nativeSessionID, len(files))
 }

@@ -50,6 +50,9 @@ type MailboxMessage struct {
 type mailboxWaiter struct {
 	waiter Waiter
 	ch     chan MailboxMessage
+	// interrupted is set (under Mailbox.mu, before ch closes) when the
+	// waiter is released to retry rather than to exit.
+	interrupted bool
 }
 
 type waitEnvelope struct {
@@ -105,6 +108,12 @@ func (m *Mailbox) Handler() http.Handler {
 		select {
 		case msg, ok := <-entry.ch:
 			if !ok {
+				if entry.interrupted {
+					// Released (Interrupt): the hook retries in-process and
+					// re-arms against the next receiver of its endpoint.
+					http.Error(w, "receiver restarting; retry", http.StatusServiceUnavailable)
+					return
+				}
 				// Superseded by a newer waiter, or the mailbox closed: the
 				// hook exits 0 and the newer waiter carries on.
 				w.WriteHeader(http.StatusNoContent)
@@ -192,6 +201,26 @@ func (m *Mailbox) Deliver(sessionID string, msg MailboxMessage) (Waiter, bool) {
 	entry.ch <- msg
 	close(entry.ch)
 	return entry.waiter, true
+}
+
+// Interrupt releases the session's armed waiter with a retryable answer (503)
+// instead of 204: the hook keeps running and re-arms against whichever
+// receiver serves its endpoint next. Use it when the caller goes away while
+// the provider process outlives it (a session on another machine reached
+// through a tunnel), so the session is not left without a waiter until its
+// next hook event. It reports whether a waiter was armed.
+func (m *Mailbox) Interrupt(sessionID string) bool {
+	m.mu.Lock()
+	entry, ok := m.waiters[sessionID]
+	if ok {
+		delete(m.waiters, sessionID)
+		entry.interrupted = true
+	}
+	m.mu.Unlock()
+	if ok {
+		close(entry.ch)
+	}
+	return ok
 }
 
 // Close answers every armed waiter 204 so the hooks exit cleanly.

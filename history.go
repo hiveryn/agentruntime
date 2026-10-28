@@ -57,3 +57,38 @@ type HistoryItem struct {
 	At           time.Time
 	TurnEnd      bool
 }
+
+// RecordLocator says where a provider keeps a session's durable record, for
+// callers that read it on another machine (over SSH) instead of the local
+// filesystem. The caller resolves the root on the target from the session's
+// launch environment there — RootEnv when set, else DefaultRoot under the
+// target account's home — fetches the files matching Patterns (shell globs
+// relative to that root) into a private local copy that keeps their relative
+// paths, and reads the copy with HistoryRecordRequest. Nothing on the target is
+// interpreted locally, and no laptop provider home is ever consulted.
+type RecordLocator interface {
+	RecordLocation(nativeSessionID string) RecordLocation
+}
+
+// RecordLocation is a provider's record layout for one native session.
+type RecordLocation struct {
+	// RootEnv names the environment variable selecting the config root
+	// (CLAUDE_CONFIG_DIR, CODEX_HOME).
+	RootEnv string
+	// DefaultRoot is the root relative to the account's home when RootEnv
+	// is unset (".claude", ".codex").
+	DefaultRoot string
+	// Patterns are shell globs relative to the root naming every file of the
+	// session's record. Callers must pass only a native id they validated as
+	// glob- and shell-safe.
+	Patterns []string
+}
+
+// HistoryRecordRequest builds the HistoryRequest that reads a local copy of a
+// session's record: copyRoot holds the fetched files at their paths relative
+// to the provider root, and files lists those relative paths. It is the
+// provider's own interpretation of its layout (Claude: exactly one transcript;
+// Codex: every rollout segment under the copy, verified as usual).
+type HistoryRecordRequester interface {
+	HistoryRecordRequest(nativeSessionID, copyRoot string, files []string) (HistoryRequest, error)
+}

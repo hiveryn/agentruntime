@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -181,5 +182,53 @@ func TestMailboxCloseAnswersEveryWaiter(t *testing.T) {
 		if status := <-statuses; status != http.StatusNoContent {
 			t.Fatalf("status %d", status)
 		}
+	}
+}
+
+// Interrupt answers a retryable 503, so the hook re-arms instead of exiting,
+// and leaves other sessions' waiters armed.
+func TestMailboxInterruptReleasesForRetry(t *testing.T) {
+	m := NewMailbox()
+	server := httptest.NewServer(m.Handler())
+	defer server.Close()
+	defer m.Close()
+	post := func(session string) <-chan int {
+		out := make(chan int, 1)
+		go func() {
+			resp, err := http.Post(server.URL, "application/json", strings.NewReader(`{"hook":{"hook_event_name":"Stop","session_id":"n"},"env":{"AGENTRUNTIME_SESSION_ID":"`+session+`"}}`))
+			if err != nil {
+				out <- -1
+				return
+			}
+			_ = resp.Body.Close()
+			out <- resp.StatusCode
+		}()
+		return out
+	}
+	a, b := post("a"), post("b")
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		_, okA := m.Armed("a")
+		_, okB := m.Armed("b")
+		if okA && okB {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("waiters not armed")
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	if !m.Interrupt("a") || m.Interrupt("missing") {
+		t.Fatal("interrupt result")
+	}
+	if status := <-a; status != http.StatusServiceUnavailable {
+		t.Fatalf("interrupted waiter status %d", status)
+	}
+	if _, ok := m.Armed("b"); !ok {
+		t.Fatal("other session's waiter released")
+	}
+	m.Close()
+	if status := <-b; status != http.StatusNoContent {
+		t.Fatalf("closed waiter status %d", status)
 	}
 }
